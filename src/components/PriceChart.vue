@@ -1,0 +1,34 @@
+<script setup lang="ts">
+import type { Market, Timeframe } from '../constants/chart.ts';
+
+defineProps<{
+  market: Market,
+  timeframe: Timeframe
+}>()
+</script>
+<template>
+  <div
+    class="
+      h-[min(65vh, min-h-80
+      bg-gray-950
+      relative 560px)]
+    "
+  >
+      <canvas
+        class="
+          block
+          h-full w-full
+        "
+       :aria-label="`${market} / ${timeframe} chart`"></canvas>
+      <p
+        class="
+          grid
+          text-sm text-gray-500
+          pointer-events-none
+          absolute inset-0 place-items-center
+        "
+      >
+        Chart will render here
+      </p>
+    </div>
+</template>
