@@ -9,16 +9,8 @@ const timeframe = defineModel<Timeframe>({ required: true });
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-lg border border-gray-800 bg-gray-900">
-    <div
-      class="
-        flex
-        min-h-13
-        px-4
-        border-b border-gray-800
-        items-center justify-between
-      "
-    >
+  <section class="overflow-hidden rounded-xl border border-gray-800 bg-gray-900 shadow-xl shadow-black/20">
+    <div class="flex min-h-14 items-center justify-between gap-4 border-b border-gray-800 bg-gray-900/80 px-4">
       <div
         class="
           flex

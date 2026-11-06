@@ -8,11 +8,7 @@ defineProps<{
 </script>
 <template>
   <div
-    class="
-      h-[min(65vh, min-h-80
-      bg-gray-950
-      relative 560px)]
-    "
+    class="relative h-[min(65vh,560px)] min-h-80 bg-gray-950"
   >
       <canvas
         class="

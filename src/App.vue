@@ -8,8 +8,10 @@
   const timeframe = ref(TIMEFRAME.HOUR_1);
 </script>
 <template>
-  <main class="min-h-screen bg-gray-950 p-4 text-gray-100 sm:p-6">
-    <HeaderBar v-model="market" />
-    <ChartPanel v-model="timeframe" :market="market" />
+  <main class="min-h-screen bg-gray-950 px-4 py-6 text-gray-100 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-screen-2xl">
+      <HeaderBar v-model="market" />
+      <ChartPanel v-model="timeframe" :market="market" />
+    </div>
   </main>
 </template>
