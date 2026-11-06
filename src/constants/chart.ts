@@ -1,8 +1,8 @@
 export const TIMEFRAME = {
   MINUTES_15: "15m",
-  HOUR_1: "1H",
-  HOURS_4: "4H",
-  DAY_1: "1D",
+  HOUR_1: "1h",
+  HOURS_4: "4h",
+  DAY_1: "1d",
 } as const;
 
 export type Timeframe = (typeof TIMEFRAME)[keyof typeof TIMEFRAME];
