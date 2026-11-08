@@ -9,10 +9,10 @@ defineProps<{
     type="button"
     :aria-pressed="pressed"
     :class="[
-      'rounded px-2.5 py-1.5 uppercase text-sm transition-colors',
+      'rounded px-2.5 py-1.5 text-sm uppercase transition-colors',
       pressed
         ? 'bg-gray-700 text-amber-400'
-        : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+        : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100',
     ]"
   >
     <slot />
