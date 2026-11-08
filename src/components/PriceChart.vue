@@ -3,6 +3,8 @@ import { onMounted, ref, watch } from 'vue';
 import type { Market, Timeframe } from '../constants/chart'
 import type { Candle } from '../types/candle';
 import { fetchCandles } from '../services/binance';
+import { CHART_MARGIN, createChartScales } from '../utils/chartScales'
+import { CANDLE_BODY_WIDTH_RATIO } from '../../.history/src/utils/chartScales_20261108221720';
 
 const props = defineProps<{
   market: Market
@@ -42,7 +44,7 @@ watch(
   { immediate: true }
 )
 
-onMounted(() => {
+function drawChart() {
   const element = canvas.value;
   if (!element) return;
 
@@ -56,13 +58,52 @@ onMounted(() => {
   const context = element.getContext('2d')
   if (!context) return
 
+  const styles = getComputedStyle(document.documentElement)
+  const risingColor = styles.getPropertyValue('--chart-candle-up').trim()
+  const fallingColor = styles.getPropertyValue('--chart-candle-down').trim()
+
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
-  context.strokeStyle = '#f59e0b'
-  context.lineWidth = 2
-  context.beginPath()
-  context.moveTo(24, height / 2)
-  context.lineTo(width - 24, height / 2)
-  context.stroke()
+  context.clearRect(0, 0, width, height)
+
+  const scales = createChartScales(candles.value, { width, height })
+  if (!scales) return
+
+  const plotWidth = width - CHART_MARGIN.left - CHART_MARGIN.right;
+
+  const candleSpacing =
+    candles.value.length > 1
+      ? Math.abs(
+        scales.x(new Date(candles.value[1]!.time)) -
+        scales.x(new Date(candles.value[0]!.time)),
+      )
+      : plotWidth
+
+  const bodyWidth = Math.max(1, Math.min(20, candleSpacing * CANDLE_BODY_WIDTH_RATIO))
+
+  for (const candle of candles.value) {
+    const x = scales.x(new Date(candle.time))
+    const openY = scales.y(candle.open)
+    const closeY = scales.y(candle.close)
+    const isRising = candle.close >= candle.open
+    const color = isRising ? risingColor : fallingColor;
+
+    context.strokeStyle = color
+    context.beginPath()
+    context.moveTo(x, scales.y(candle.high))
+    context.lineTo(x, scales.y(candle.low))
+    context.stroke()
+
+    context.fillStyle = color
+    const bodyTop = Math.min(openY, closeY)
+    const bodyHeight = Math.max(1, Math.abs(closeY - openY))
+    context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight)
+  }
+}
+
+watch(candles, drawChart);
+
+onMounted(() => {
+  drawChart()
 })
 </script>
 

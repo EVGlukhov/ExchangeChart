@@ -1,1 +1,6 @@
 @import 'tailwindcss';
+
+:root {
+  --chart-candle-up: #22c55e;
+  --chart-candle-down: #ef4444;
+}

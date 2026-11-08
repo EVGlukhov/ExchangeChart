@@ -8,6 +8,8 @@ export const CHART_MARGIN = {
   left: 12,
 } as const
 
+export const CANDLE_BODY_WIDTH_RATIO = 0.65
+
 type ChartScales = {
   x: ScaleTime<number, number>
   y: ScaleLinear<number, number>
