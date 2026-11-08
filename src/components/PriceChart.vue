@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import type { Market, Timeframe } from '../constants/chart'
 import type { Candle } from '../types/candle';
 import { fetchCandles } from '../services/binance';
-import { CHART_MARGIN, createChartScales } from '../utils/chartScales'
-import { CANDLE_BODY_WIDTH_RATIO } from '../../.history/src/utils/chartScales_20261108221720';
+import { CHART_MARGIN, createChartScales, CANDLE_BODY_WIDTH_RATIO } from '../utils/chartScales'
 
 const props = defineProps<{
   market: Market
@@ -17,6 +16,7 @@ const loading = ref(false)
 const error = ref('')
 
 let controller: AbortController | undefined
+let resizeObserver: ResizeObserver | undefined
 
 watch(
   () => [props.market, props.timeframe] as const,
@@ -103,7 +103,22 @@ function drawChart() {
 watch(candles, drawChart);
 
 onMounted(() => {
+  const element = canvas.value
+  const container = element?.parentElement
+
+  if (!container) return
+
+  resizeObserver = new ResizeObserver(() => {
+    drawChart()
+  })
+
+  resizeObserver.observe(container)
   drawChart()
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  controller?.abort();
 })
 </script>
 
