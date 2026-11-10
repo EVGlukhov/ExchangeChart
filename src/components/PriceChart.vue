@@ -44,6 +44,34 @@ watch(
   { immediate: true }
 )
 
+type ChartStyles = {
+  candles: {
+    rising: string
+    falling: string
+  }
+  axis: {
+    text: string
+    font: string
+  }
+  grid: string
+}
+
+function getChartStyles(): ChartStyles {
+  const styles = getComputedStyle(document.documentElement);
+
+  return {
+    candles: {
+      rising: styles.getPropertyValue('--chart-candle-up').trim(),
+      falling: styles.getPropertyValue('--chart-candle-down').trim(),
+    },
+    axis: {
+      text: styles.getPropertyValue('--chart-axis-text').trim(),
+      font: styles.getPropertyValue('--chart-axis-font').trim(),
+    },
+    grid: styles.getPropertyValue('--chart-grid').trim(),
+  }
+}
+
 function drawChart() {
   const element = canvas.value;
   if (!element) return;
@@ -58,15 +86,16 @@ function drawChart() {
   const context = element.getContext('2d')
   if (!context) return
 
-  const styles = getComputedStyle(document.documentElement)
-  const risingColor = styles.getPropertyValue('--chart-candle-up').trim()
-  const fallingColor = styles.getPropertyValue('--chart-candle-down').trim()
-
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
   context.clearRect(0, 0, width, height)
 
   const scales = createChartScales(candles.value, { width, height })
   if (!scales) return
+
+  const styles = getChartStyles()
+  const priceFormatter = new Intl.NumberFormat('en-US', {
+    maximumSignificantDigits: 6
+  })
 
   const plotWidth = width - CHART_MARGIN.left - CHART_MARGIN.right;
 
@@ -80,12 +109,34 @@ function drawChart() {
 
   const bodyWidth = Math.max(1, Math.min(20, candleSpacing * CANDLE_BODY_WIDTH_RATIO))
 
+  context.font = styles.axis.font
+  context.textAlign = 'left'
+  context.textBaseline = 'middle'
+
+  for (const price of scales.y.ticks(6)) {
+    const y = scales.y(price)
+
+    context.strokeStyle = styles.grid;
+    context.lineWidth = 1
+    context.beginPath()
+    context.moveTo(CHART_MARGIN.left, y);
+    context.lineTo(width - CHART_MARGIN.right, y);
+    context.stroke()
+
+    context.fillStyle = styles.axis.text
+    context.fillText(
+      priceFormatter.format(price),
+      width - CHART_MARGIN.right + 8,
+      y
+    )
+  }
+
   for (const candle of candles.value) {
     const x = scales.x(new Date(candle.time))
     const openY = scales.y(candle.open)
     const closeY = scales.y(candle.close)
     const isRising = candle.close >= candle.open
-    const color = isRising ? risingColor : fallingColor;
+    const color = isRising ? styles.candles.rising : styles.candles.falling;
 
     context.strokeStyle = color
     context.beginPath()
