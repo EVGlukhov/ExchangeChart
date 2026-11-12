@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MARKETS, type Market } from '../constants/chart'
+import { MARKETS } from '../constants/chart'
 
 const market = defineModel<string>({ required: true })
 </script>

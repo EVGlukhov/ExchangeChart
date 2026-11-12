@@ -9,6 +9,7 @@ export const CHART_MARGIN = {
 } as const
 
 export const CANDLE_BODY_WIDTH_RATIO = 0.65
+export const CHART_X_INSET = 12
 
 type ChartScales = {
   x: ScaleTime<number, number>
@@ -26,7 +27,7 @@ export function createChartScales(
 ): ChartScales | null {
   const { top, right, bottom, left } = CHART_MARGIN
 
-  if (candles.length === 0 || width <= left + right || height <= top + bottom) {
+  if (candles.length === 0 || width <= left + right + CHART_X_INSET * 2 || height <= top + bottom) {
     return null
   }
 
@@ -44,7 +45,7 @@ export function createChartScales(
 
   const x = scaleTime()
     .domain([new Date(firstCandle.time), new Date(lastCandle.time)])
-    .range([left, width - right])
+    .range([left + CHART_X_INSET, width - right - CHART_X_INSET])
 
   const y = scaleLinear()
     .domain([lowestPrice - padding, highestPrice + padding])
