@@ -7,4 +7,7 @@
   --chart-axis-text: #9ca3af;
   --chart-crosshair: #9ca3af;
   --chart-axis-font: 12px system-ui, sans-serif;
+  --chart-tooltip-width: 190px;
+  --chart-tooltip-height: 130px;
+  --chart-tooltip-offset: 12px;
 }

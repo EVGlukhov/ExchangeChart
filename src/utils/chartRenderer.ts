@@ -1,6 +1,6 @@
 import type { Candle } from '../types/candle'
+import type { ChartTheme } from '../types/chartTheme'
 import { CANDLE_BODY_WIDTH_RATIO, CHART_MARGIN, createChartScales } from './chartScales'
-import { getChartStyles, type ChartStyles } from './chartStyles'
 
 export interface ChartCursor {
   x: number
@@ -11,6 +11,7 @@ export function renderChart(
   element: HTMLCanvasElement,
   candles: readonly Candle[],
   cursor: ChartCursor | null,
+  chartTheme: ChartTheme,
 ): void {
   const { width, height } = element.getBoundingClientRect()
   if (width === 0 || height === 0) return
@@ -28,14 +29,12 @@ export function renderChart(
   const scales = createChartScales(candles, { width, height })
   if (!scales) return
 
-  const styles = getChartStyles()
-
-  drawPriceAxis(context, scales, width, styles)
-  drawTimeAxis(context, scales, height, styles)
-  drawCandles(context, candles, scales, width, styles)
+  drawPriceAxis(context, scales, width, chartTheme)
+  drawTimeAxis(context, scales, height, chartTheme)
+  drawCandles(context, candles, scales, width, chartTheme)
 
   if (cursor) {
-    drawCrosshair(context, cursor, scales, height, styles)
+    drawCrosshair(context, cursor, scales, height, chartTheme)
   }
 }
 
@@ -44,7 +43,7 @@ function drawCrosshair(
   cursor: ChartCursor,
   scales: NonNullable<ReturnType<typeof createChartScales>>,
   height: number,
-  styles: ChartStyles,
+  chartTheme: ChartTheme,
 ) {
   const [plotLeft, plotRight] = scales.x.range()
   const plotTop = CHART_MARGIN.top
@@ -55,7 +54,7 @@ function drawCrosshair(
   }
 
   context.save()
-  context.strokeStyle = styles.crosshair
+  context.strokeStyle = chartTheme.crosshair
   context.lineWidth = 1
   context.setLineDash([4, 4])
 
@@ -74,7 +73,7 @@ function drawCandles(
   candles: readonly Candle[],
   scales: NonNullable<ReturnType<typeof createChartScales>>,
   width: number,
-  styles: ChartStyles,
+  chartTheme: ChartTheme,
 ) {
   const plotWidth = width - CHART_MARGIN.left - CHART_MARGIN.right
 
@@ -93,7 +92,7 @@ function drawCandles(
     const openY = scales.y(candle.open)
     const closeY = scales.y(candle.close)
     const isRising = candle.close >= candle.open
-    const color = isRising ? styles.candles.rising : styles.candles.falling
+    const color = isRising ? chartTheme.candles.rising : chartTheme.candles.falling
 
     context.strokeStyle = color
     context.beginPath()
@@ -112,27 +111,27 @@ function drawPriceAxis(
   context: CanvasRenderingContext2D,
   scales: NonNullable<ReturnType<typeof createChartScales>>,
   width: number,
-  styles: ChartStyles,
+  chartTheme: ChartTheme,
 ) {
   const priceFormatter = new Intl.NumberFormat('en-US', {
     maximumSignificantDigits: 6,
   })
 
-  context.font = styles.axis.font
+  context.font = chartTheme.axis.font
   context.textAlign = 'left'
   context.textBaseline = 'middle'
 
   for (const price of scales.y.ticks(6)) {
     const y = scales.y(price)
 
-    context.strokeStyle = styles.grid
+    context.strokeStyle = chartTheme.grid
     context.lineWidth = 1
     context.beginPath()
     context.moveTo(CHART_MARGIN.left, y)
     context.lineTo(width - CHART_MARGIN.right, y)
     context.stroke()
 
-    context.fillStyle = styles.axis.text
+    context.fillStyle = chartTheme.axis.text
     context.fillText(priceFormatter.format(price), width - CHART_MARGIN.right + 8, y)
   }
 }
@@ -141,7 +140,7 @@ function drawTimeAxis(
   context: CanvasRenderingContext2D,
   scales: NonNullable<ReturnType<typeof createChartScales>>,
   height: number,
-  styles: ChartStyles,
+  chartTheme: ChartTheme,
 ) {
   const [plotLeft, plotRight] = scales.x.range()
   const plotWidth = plotRight - plotLeft
@@ -162,7 +161,7 @@ function drawTimeAxis(
         : { month: 'short', year: 'numeric' },
   )
 
-  context.font = styles.axis.font
+  context.font = chartTheme.axis.font
   context.textAlign = 'center'
   context.textBaseline = 'top'
 
@@ -170,14 +169,14 @@ function drawTimeAxis(
     const x = plotLeft + index * tickSpacing
     const time = scales.x.invert(x)
 
-    context.strokeStyle = styles.grid
+    context.strokeStyle = chartTheme.grid
     context.lineWidth = 1
     context.beginPath()
     context.moveTo(x, CHART_MARGIN.top)
     context.lineTo(x, height - CHART_MARGIN.bottom)
     context.stroke()
 
-    context.fillStyle = styles.axis.text
+    context.fillStyle = chartTheme.axis.text
     context.fillText(timeFormatter.format(time), x, height - CHART_MARGIN.bottom + 6)
   }
 }

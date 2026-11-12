@@ -1,17 +1,6 @@
-export type ChartStyles = {
-  candles: {
-    rising: string
-    falling: string
-  }
-  axis: {
-    text: string
-    font: string
-  }
-  grid: string
-  crosshair: string
-}
+import type { ChartTheme } from '../types/chartTheme'
 
-export function getChartStyles(): ChartStyles {
+export function getChartTheme(): ChartTheme {
   const styles = getComputedStyle(document.documentElement)
 
   return {
@@ -25,5 +14,10 @@ export function getChartStyles(): ChartStyles {
     },
     grid: styles.getPropertyValue('--chart-grid').trim(),
     crosshair: styles.getPropertyValue('--chart-crosshair').trim(),
+    tooltip: {
+      width: Number.parseFloat(styles.getPropertyValue('--chart-tooltip-width')),
+      height: Number.parseFloat(styles.getPropertyValue('--chart-tooltip-height')),
+      offset: Number.parseFloat(styles.getPropertyValue('--chart-tooltip-offset')),
+    },
   }
 }

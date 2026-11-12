@@ -1,19 +1,22 @@
 import { onBeforeUnmount, onMounted, watch, type Ref } from 'vue'
 import type { Candle } from '../types/candle'
 import { renderChart, type ChartCursor } from '../utils/chartRenderer'
+import { useChartTheme } from './useChartTheme'
 
 export function useCanvasChart(
   canvas: Ref<HTMLCanvasElement | null>,
   candles: Ref<Candle[]>,
   cursor: Ref<ChartCursor | null>,
 ) {
+  const chartTheme = useChartTheme()
+
   let resizeObserver: ResizeObserver | undefined
 
   function redraw() {
     const element = canvas.value
     if (!element) return
 
-    renderChart(element, candles.value, cursor.value)
+    renderChart(element, candles.value, cursor.value, chartTheme.value)
   }
 
   watch([candles, cursor], redraw)
