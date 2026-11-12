@@ -7,7 +7,11 @@ export interface ChartCursor {
   y: number
 }
 
-export function renderChart(element: HTMLCanvasElement, candles: readonly Candle[]): void {
+export function renderChart(
+  element: HTMLCanvasElement,
+  candles: readonly Candle[],
+  cursor: ChartCursor | null,
+): void {
   const { width, height } = element.getBoundingClientRect()
   if (width === 0 || height === 0) return
 
@@ -29,6 +33,40 @@ export function renderChart(element: HTMLCanvasElement, candles: readonly Candle
   drawPriceAxis(context, scales, width, styles)
   drawTimeAxis(context, scales, height, styles)
   drawCandles(context, candles, scales, width, styles)
+
+  if (cursor) {
+    drawCrosshair(context, cursor, scales, height, styles)
+  }
+}
+
+function drawCrosshair(
+  context: CanvasRenderingContext2D,
+  cursor: ChartCursor,
+  scales: NonNullable<ReturnType<typeof createChartScales>>,
+  height: number,
+  styles: ChartStyles,
+) {
+  const [plotLeft, plotRight] = scales.x.range()
+  const plotTop = CHART_MARGIN.top
+  const plotBottom = height - CHART_MARGIN.bottom
+
+  if (cursor.x < plotLeft || cursor.x > plotRight || cursor.y < plotTop || cursor.y > plotBottom) {
+    return
+  }
+
+  context.save()
+  context.strokeStyle = styles.crosshair
+  context.lineWidth = 1
+  context.setLineDash([4, 4])
+
+  context.beginPath()
+  context.moveTo(cursor.x, plotTop)
+  context.lineTo(cursor.x, plotBottom)
+  context.moveTo(plotLeft, cursor.y)
+  context.lineTo(plotRight, cursor.y)
+  context.stroke()
+
+  context.restore()
 }
 
 function drawCandles(

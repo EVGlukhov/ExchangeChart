@@ -8,6 +8,7 @@ export type ChartStyles = {
     font: string
   }
   grid: string
+  crosshair: string
 }
 
 export function getChartStyles(): ChartStyles {
@@ -23,5 +24,6 @@ export function getChartStyles(): ChartStyles {
       font: styles.getPropertyValue('--chart-axis-font').trim(),
     },
     grid: styles.getPropertyValue('--chart-grid').trim(),
+    crosshair: styles.getPropertyValue('--chart-crosshair').trim(),
   }
 }

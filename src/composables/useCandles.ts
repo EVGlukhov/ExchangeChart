@@ -29,7 +29,7 @@ export function useCandles(
         error.value = cause instanceof Error ? cause.message : 'Не удалось загрузить свечи'
         candles.value = []
       } finally {
-        if (controller.signal.aborted) {
+        if (!controller.signal.aborted) {
           loading.value = false
         }
       }

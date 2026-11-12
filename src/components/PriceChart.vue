@@ -3,6 +3,7 @@ import { ref } from "vue";
 import type { Market, Timeframe } from "../constants/chart";
 import { useCandles } from "../composables/useCandles";
 import { useCanvasChart } from "../composables/useCanvasChart";
+import { useChartCrosshair } from "../composables/useChartCrosshair";
 
 const props = defineProps<{
   market: Market;
@@ -16,7 +17,9 @@ const { candles, loading, error } = useCandles(
   () => props.timeframe
 )
 
-useCanvasChart(canvas, candles)
+const { cursor, handlePointerMove, handlePointerLeave } = useChartCrosshair(canvas)
+
+useCanvasChart(canvas, candles, cursor)
 
 </script>
 
@@ -26,6 +29,8 @@ useCanvasChart(canvas, candles)
       ref="canvas"
       class="block h-full w-full"
       :aria-label="`${props.market} / ${props.timeframe} chart`"
+      @pointermove="handlePointerMove"
+      @pointerleave="handlePointerLeave"
     ></canvas>
     <p
       v-if="loading"

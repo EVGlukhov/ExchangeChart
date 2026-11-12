@@ -5,5 +5,6 @@
   --chart-candle-down: #ef4444;
   --chart-grid: rgba(148, 163, 184, 0.16);
   --chart-axis-text: #9ca3af;
+  --chart-crosshair: #9ca3af;
   --chart-axis-font: 12px system-ui, sans-serif;
 }
