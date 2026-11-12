@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, watch } from "vue";
+import { ref } from "vue";
 import type { Market, Timeframe } from "../constants/chart";
-import type { Candle } from "../types/candle";
-import { fetchCandles } from "../services/binance";
-import { renderChart } from "../utils/chartRenderer";
+import { useCandles } from "../composables/useCandles";
+import { useCanvasChart } from "../composables/useCanvasChart";
 
 const props = defineProps<{
   market: Market;
@@ -11,66 +10,14 @@ const props = defineProps<{
 }>();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
-const candles = ref<Candle[]>([]);
-const loading = ref(false);
-const error = ref("");
 
-let controller: AbortController | undefined;
-let resizeObserver: ResizeObserver | undefined;
+const { candles, loading, error } = useCandles(
+  () => props.market,
+  () => props.timeframe
+)
 
-watch(
-  () => [props.market, props.timeframe] as const,
-  async ([market, timeframe]) => {
-    controller?.abort();
+useCanvasChart(canvas, candles)
 
-    const request = new AbortController();
-    controller = request;
-    loading.value = true;
-    error.value = "";
-
-    try {
-      candles.value = await fetchCandles(market, timeframe, request.signal);
-    } catch (cause) {
-      if (request.signal.aborted) return;
-
-      error.value = cause instanceof Error ? cause.message : "Не удалось загрузить свечи";
-      candles.value = [];
-    } finally {
-      if (controller === request) {
-        loading.value = false;
-      }
-    }
-  },
-  { immediate: true }
-);
-
-function drawChart() {
-  const element = canvas.value;
-  if (!element) return;
-
-  renderChart(element, candles.value);
-}
-
-watch(candles, drawChart);
-
-onMounted(() => {
-  const element = canvas.value;
-  const container = element?.parentElement;
-
-  if (!container) return;
-
-  resizeObserver = new ResizeObserver(() => {
-    drawChart();
-  });
-
-  resizeObserver.observe(container);
-  drawChart();
-});
-
-onBeforeUnmount(() => {
-  resizeObserver?.disconnect();
-  controller?.abort();
-});
 </script>
 
 <template>

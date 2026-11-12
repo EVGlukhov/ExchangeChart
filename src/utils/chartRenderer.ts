@@ -2,6 +2,11 @@ import type { Candle } from '../types/candle'
 import { CANDLE_BODY_WIDTH_RATIO, CHART_MARGIN, createChartScales } from './chartScales'
 import { getChartStyles, type ChartStyles } from './chartStyles'
 
+export interface ChartCursor {
+  x: number
+  y: number
+}
+
 export function renderChart(element: HTMLCanvasElement, candles: readonly Candle[]): void {
   const { width, height } = element.getBoundingClientRect()
   if (width === 0 || height === 0) return
