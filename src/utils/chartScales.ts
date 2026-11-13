@@ -10,10 +10,13 @@ export const CHART_MARGIN = {
 
 export const CANDLE_BODY_WIDTH_RATIO = 0.65
 export const CHART_X_INSET = 12
+export const VOLUME_PANEL_HEIGHT = 64
+export const VOLUME_PANEL_GAP = 12
 
 type ChartScales = {
   x: ScaleTime<number, number>
   y: ScaleLinear<number, number>
+  yVolume: ScaleLinear<number, number>
 }
 
 interface ChartSize {
@@ -27,7 +30,11 @@ export function createChartScales(
 ): ChartScales | null {
   const { top, right, bottom, left } = CHART_MARGIN
 
-  if (candles.length === 0 || width <= left + right + CHART_X_INSET * 2 || height <= top + bottom) {
+  if (
+    candles.length === 0 ||
+    width <= left + right + CHART_X_INSET * 2 ||
+    height <= top + bottom + VOLUME_PANEL_HEIGHT + VOLUME_PANEL_GAP
+  ) {
     return null
   }
 
@@ -40,6 +47,9 @@ export function createChartScales(
 
   const lowestPrice = Math.min(...candles.map((candle) => candle.low))
   const highestPrice = Math.max(...candles.map((candle) => candle.high))
+  const volumeTop = height - bottom - VOLUME_PANEL_HEIGHT
+  const priceBottom = volumeTop - VOLUME_PANEL_GAP
+  const maxVolume = Math.max(...candles.map((candle) => candle.volume))
   const priceRange = highestPrice - lowestPrice
   const padding = priceRange * 0.05 || Math.abs(highestPrice) * 0.005 || 1
 
@@ -50,7 +60,11 @@ export function createChartScales(
   const y = scaleLinear()
     .domain([lowestPrice - padding, highestPrice + padding])
     .nice()
-    .range([height - bottom, top])
+    .range([priceBottom, top])
 
-  return { x, y }
+  const yVolume = scaleLinear()
+    .domain([0, maxVolume || 1])
+    .range([height - bottom, volumeTop])
+
+  return { x, y, yVolume }
 }

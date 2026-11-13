@@ -1,6 +1,11 @@
 import type { Candle } from '../types/candle'
 import type { ChartTheme } from '../types/chartTheme'
-import { CANDLE_BODY_WIDTH_RATIO, CHART_MARGIN, createChartScales } from './chartScales'
+import {
+  CANDLE_BODY_WIDTH_RATIO,
+  CHART_MARGIN,
+  VOLUME_PANEL_HEIGHT,
+  createChartScales,
+} from './chartScales'
 
 export interface ChartCursor {
   x: number
@@ -31,11 +36,57 @@ export function renderChart(
 
   drawPriceAxis(context, scales, width, chartTheme)
   drawTimeAxis(context, scales, height, chartTheme)
+  drawVolume(context, candles, scales, width, height, chartTheme)
   drawCandles(context, candles, scales, width, chartTheme)
 
   if (cursor) {
     drawCrosshair(context, cursor, scales, height, chartTheme)
   }
+}
+
+function drawVolume(
+  context: CanvasRenderingContext2D,
+  candles: readonly Candle[],
+  scales: NonNullable<ReturnType<typeof createChartScales>>,
+  width: number,
+  height: number,
+  chartTheme: ChartTheme,
+) {
+  const plotWidth = width - CHART_MARGIN.left - CHART_MARGIN.right
+  const firstCandle = candles[0]
+  const secondCandle = candles[1]
+
+  const candleSpacing =
+    firstCandle && secondCandle
+      ? Math.abs(scales.x(new Date(secondCandle.time)) - scales.x(new Date(firstCandle.time)))
+      : plotWidth
+
+  const barWidth = Math.max(1, Math.min(20, candleSpacing * CANDLE_BODY_WIDTH_RATIO))
+
+  const baseline = height - CHART_MARGIN.bottom
+  const volumeTop = baseline - VOLUME_PANEL_HEIGHT
+
+  context.save()
+
+  context.strokeStyle = chartTheme.grid
+  context.lineWidth = 1
+  context.beginPath()
+  context.moveTo(CHART_MARGIN.left, volumeTop)
+  context.lineTo(width - CHART_MARGIN.right, volumeTop)
+  context.stroke()
+
+  for (const candle of candles) {
+    const x = scales.x(new Date(candle.time))
+    const y = scales.yVolume(candle.volume)
+    const color =
+      candle.close >= candle.open ? chartTheme.candles.rising : chartTheme.candles.falling
+
+    context.fillStyle = color
+    context.globalAlpha = 0.5
+    context.fillRect(x - barWidth / 2, y, barWidth, baseline - y)
+  }
+
+  context.restore()
 }
 
 function drawCrosshair(
