@@ -12,6 +12,7 @@ export const CANDLE_BODY_WIDTH_RATIO = 0.65
 export const CHART_X_INSET = 12
 export const VOLUME_PANEL_HEIGHT = 64
 export const VOLUME_PANEL_GAP = 12
+export const AXIS_LABEL_GAP = 8
 
 type ChartScales = {
   x: ScaleTime<number, number>

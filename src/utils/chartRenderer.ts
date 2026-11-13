@@ -1,6 +1,7 @@
 import type { Candle } from '../types/candle'
 import type { ChartTheme } from '../types/chartTheme'
 import {
+  AXIS_LABEL_GAP,
   CANDLE_BODY_WIDTH_RATIO,
   CHART_MARGIN,
   VOLUME_PANEL_HEIGHT,
@@ -36,12 +37,52 @@ export function renderChart(
 
   drawPriceAxis(context, scales, width, chartTheme)
   drawTimeAxis(context, scales, height, chartTheme)
+  drawVolumeAxis(context, scales, width, height, chartTheme)
   drawVolume(context, candles, scales, width, height, chartTheme)
   drawCandles(context, candles, scales, width, chartTheme)
 
   if (cursor) {
     drawCrosshair(context, cursor, scales, height, chartTheme)
   }
+}
+
+function drawVolumeAxis(
+  context: CanvasRenderingContext2D,
+  scales: NonNullable<ReturnType<typeof createChartScales>>,
+  width: number,
+  height: number,
+  chartTheme: ChartTheme,
+) {
+  const baseline = height - CHART_MARGIN.bottom
+  const volumeTop = baseline - VOLUME_PANEL_HEIGHT
+  const volumeFormatter = new Intl.NumberFormat(undefined, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  })
+
+  context.font = chartTheme.axis.font
+  context.textAlign = 'left'
+  context.textBaseline = 'middle'
+
+  for (const volume of scales.yVolume.ticks(3)) {
+    const y = scales.yVolume(volume)
+
+    context.strokeStyle = chartTheme.grid
+    context.lineWidth = 1
+    context.beginPath()
+    context.moveTo(CHART_MARGIN.left, y)
+    context.lineTo(width - CHART_MARGIN.right, y)
+    context.stroke()
+
+    context.fillStyle = chartTheme.axis.text
+    context.fillText(volumeFormatter.format(volume), width - CHART_MARGIN.right + AXIS_LABEL_GAP, y)
+  }
+
+  context.strokeStyle = chartTheme.grid
+  context.beginPath()
+  context.moveTo(CHART_MARGIN.left, volumeTop)
+  context.lineTo(width - CHART_MARGIN.right, volumeTop)
+  context.stroke()
 }
 
 function drawVolume(
