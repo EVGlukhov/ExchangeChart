@@ -10,4 +10,20 @@
   --chart-tooltip-width: 190px;
   --chart-tooltip-height: 130px;
   --chart-tooltip-offset: 12px;
+  --chart-background: #030712;
+}
+
+.chart-panel:fullscreen {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  flex-direction: column;
+  border-radius: 0;
+  background-color: var(--chart-background);
+}
+
+.chart-panel:fullscreen .chart-content {
+  min-height: 0;
+  flex: 1;
+  height: auto;
 }
