@@ -9,6 +9,7 @@ declare module '*.vue' {
 
 interface ImportMetaEnv {
   readonly VITE_BINANCE_API_BASE_URL: string
+  readonly VITE_BINANCE_WS_BASE_URL: string
 }
 
 interface ImportMeta {
