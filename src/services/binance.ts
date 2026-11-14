@@ -1,5 +1,9 @@
-import type { Market, Timeframe } from '../constants/chart'
+import { TRADE_SIDE, type Market, type Timeframe } from '../constants/chart'
 import type { Candle } from '../types/candle'
+import type { SpotTicker } from '../types/spotTicker'
+import type { Trade } from '../types/trade'
+
+const BINANCE_TICKER_24HR_EVENT = '24hrTicker'
 
 function toFiniteNumber(value: unknown, field: string): number {
   const number =
@@ -10,7 +14,7 @@ function toFiniteNumber(value: unknown, field: string): number {
         : Number.NaN
 
   if (!Number.isFinite(number)) {
-    throw new Error(`Invalid Binance candle field: ${field}`)
+    throw new Error(`Invalid Binance numeric field: ${field}`)
   }
 
   return number
@@ -129,6 +133,142 @@ export function subscribeCandles(
   socket.addEventListener('close', () => {
     if (!closed) {
       onError(new Error('Binance WebSocket connection closed'))
+    }
+  })
+
+  return cleanup
+}
+
+export function subscribeTrades(
+  market: Market,
+  handlers: {
+    onTrade: (trade: Trade) => void
+    onError: (error: Error) => void
+    onOpen?: () => void
+  },
+): () => void {
+  const baseUrl = import.meta.env.VITE_BINANCE_WS_BASE_URL
+
+  if (!baseUrl) {
+    throw new Error('VITE_BINANCE_WS_BASE_URL is not configured')
+  }
+
+  const url = new URL(`/ws/${market.toLowerCase()}@trade`, baseUrl)
+  const socket = new WebSocket(url)
+  let disposed = false
+
+  const cleanup = () => {
+    disposed = true
+    if (socket.readyState < WebSocket.CLOSED) socket.close()
+  }
+
+  const fail = (error: Error) => {
+    if (disposed) return
+    handlers.onError(error)
+    cleanup()
+  }
+
+  socket.addEventListener('open', () => {
+    if (!disposed) handlers.onOpen?.()
+  })
+
+  socket.addEventListener('message', (event: MessageEvent<string>) => {
+    try {
+      const message: unknown = JSON.parse(event.data)
+
+      if (!isRecord(message) || message.e !== 'trade' || typeof message.m !== 'boolean') {
+        throw new Error('Unexpected Binance trade message')
+      }
+
+      const trade: Trade = {
+        id: toFiniteNumber(message.t, 'trade id'),
+        time: toFiniteNumber(message.T, 'trade time'),
+        price: toFiniteNumber(message.p, 'trade price'),
+        quantity: toFiniteNumber(message.q, 'trade quantity'),
+        side: message.m ? TRADE_SIDE.SELL : TRADE_SIDE.BUY,
+      }
+
+      handlers.onTrade(trade)
+    } catch (cause) {
+      fail(cause instanceof Error ? cause : new Error('Invalid Binance trade data'))
+    }
+  })
+
+  socket.addEventListener('error', () => {
+    fail(new Error('Binance trade stream connection failed'))
+  })
+
+  socket.addEventListener('close', () => {
+    if (!disposed) {
+      disposed = true
+      handlers.onError(new Error('Binance trade stream connection closed'))
+    }
+  })
+
+  return cleanup
+}
+
+export function subscribeSpotTicker(
+  market: Market,
+  handlers: {
+    onTicker: (ticker: SpotTicker) => void
+    onError: (error: Error) => void
+    onOpen?: () => void
+  },
+): () => void {
+  const baseUrl = import.meta.env.VITE_BINANCE_WS_BASE_URL
+
+  if (!baseUrl) {
+    throw new Error('VITE_BINANCE_WS_BASE_URL is not configured')
+  }
+
+  const url = new URL(`/ws/${market.toLowerCase()}@ticker`, baseUrl)
+  const socket = new WebSocket(url)
+  let disposed = false
+
+  const cleanup = () => {
+    disposed = true
+    if (socket.readyState < WebSocket.CLOSED) socket.close()
+  }
+
+  const fail = (error: Error) => {
+    if (disposed) return
+    handlers.onError(error)
+    cleanup()
+  }
+
+  socket.addEventListener('open', () => {
+    if (!disposed) handlers.onOpen?.()
+  })
+
+  socket.addEventListener('message', (event: MessageEvent) => {
+    try {
+      const message: unknown = JSON.parse(event.data)
+
+      if (!isRecord(message) || message.e !== BINANCE_TICKER_24HR_EVENT || message.s !== market) {
+        throw new Error('Unexpected Binance Spot ticker message')
+      }
+
+      handlers.onTicker({
+        lastPrice: toFiniteNumber(message.c, 'ticker price'),
+        changePercent: toFiniteNumber(message.P, '24h change'),
+        highPrice: toFiniteNumber(message.h, '24h high'),
+        lowPrice: toFiniteNumber(message.l, '24h low'),
+        quoteVolume: toFiniteNumber(message.q, '24h quote volume'),
+      })
+    } catch (cause) {
+      fail(cause instanceof Error ? cause : new Error('Invalid Binance Spot ticker data'))
+    }
+  })
+
+  socket.addEventListener('error', () => {
+    fail(new Error('Binance Spot ticker connection failed'))
+  })
+
+  socket.addEventListener('close', () => {
+    if (!disposed) {
+      disposed = true
+      handlers.onError(new Error('Binance Spot ticker connection closed'))
     }
   })
 

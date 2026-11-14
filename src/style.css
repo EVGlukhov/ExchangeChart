@@ -1,16 +1,29 @@
 @import 'tailwindcss';
 
 :root {
-  --chart-candle-up: #22c55e;
-  --chart-candle-down: #ef4444;
-  --chart-grid: rgba(148, 163, 184, 0.16);
-  --chart-axis-text: #9ca3af;
-  --chart-crosshair: #9ca3af;
+  --chart-candle-up: #0ecb81;
+  --chart-candle-down: #f6465d;
+  --chart-grid: rgba(132, 142, 156, 0.14);
+  --chart-axis-text: #848e9c;
+  --chart-crosshair: #848e9c;
   --chart-axis-font: 12px system-ui, sans-serif;
   --chart-tooltip-width: 190px;
   --chart-tooltip-height: 130px;
   --chart-tooltip-offset: 12px;
-  --chart-background: #030712;
+  --chart-background: #0b0e11;
+}
+
+@theme {
+  --color-binance-page: #0b0e11;
+  --color-binance-surface: #161a1e;
+  --color-binance-panel: #0b0e11;
+  --color-binance-hover: #1e2329;
+  --color-binance-border: #2b3139;
+  --color-binance-text: #eaecef;
+  --color-binance-muted: #848e9c;
+  --color-binance-accent: #f0b90b;
+  --color-binance-buy: #0ecb81;
+  --color-binance-sell: #f6465d;
 }
 
 .chart-panel:fullscreen {
@@ -27,3 +40,4 @@
   flex: 1;
   height: auto;
 }
+

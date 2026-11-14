@@ -27,3 +27,10 @@ export const MARKETS = [
   { symbol: MARKET.ETH_USDT, label: 'ETH / USDT' },
   { symbol: MARKET.BNB_USDT, label: 'BNB / USDT' },
 ] as const
+
+export const TRADE_SIDE = {
+  BUY: 'buy',
+  SELL: 'sell',
+} as const
+
+export type TradeSide = (typeof TRADE_SIDE)[keyof typeof TRADE_SIDE]

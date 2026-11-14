@@ -1,24 +1,29 @@
 <script setup lang="ts">
-import { provide, ref, shallowRef } from 'vue'
-import HeaderBar from './components/HeaderBar.vue'
-import ChartPanel from './components/ChartPanel.vue'
-import { MARKET, TIMEFRAME } from './constants/chart.ts'
-import type { ChartTheme } from './types/chartTheme.ts'
-import { getChartTheme } from './utils/getChartTheme.ts'
-import { chartThemeKey } from './di/chartThemeKey.ts'
+import { provide, ref, shallowRef } from "vue";
+import HeaderBar from "./components/HeaderBar.vue";
+import ChartPanel from "./components/ChartPanel.vue";
+import RecentTrades from "./components/RecentTrades.vue";
+import { MARKET, TIMEFRAME, type Market, type Timeframe } from "./constants/chart.ts";
+import type { ChartTheme } from "./types/chartTheme.ts";
+import { getChartTheme } from "./utils/getChartTheme.ts";
+import { chartThemeKey } from "./di/chartThemeKey.ts";
 
-const market = ref(MARKET.BTC_USDT)
-const timeframe = ref(TIMEFRAME.HOUR_1)
+const market = ref<Market>(MARKET.BTC_USDT);
+const timeframe = ref<Timeframe>(TIMEFRAME.HOUR_1);
 
-const chartTheme = shallowRef<ChartTheme>(getChartTheme())
-provide(chartThemeKey, chartTheme)
-
+const chartTheme = shallowRef<ChartTheme>(getChartTheme());
+provide(chartThemeKey, chartTheme);
 </script>
 <template>
-  <main class="min-h-screen bg-gray-950 px-4 py-6 text-gray-100 sm:px-6 lg:px-8">
+  <main class="min-h-screen bg-binance-page px-4 py-6 text-binance-text sm:px-6 lg:px-8">
     <div class="mx-auto max-w-screen-2xl">
       <HeaderBar v-model="market" />
-      <ChartPanel v-model="timeframe" :market="market" />
+      <div class="mt-4 overflow-x-auto">
+        <div class="grid min-w-208 grid-cols-[minmax(0,1fr)_14rem] gap-4">
+          <ChartPanel v-model="timeframe" :market="market" />
+          <RecentTrades :market="market" />
+        </div>
+      </div>
     </div>
   </main>
 </template>

@@ -16,10 +16,10 @@ const { isFullscreen, toggleFullscreen } = useFullscreen(panel)
 
 <template>
   <section ref="panel"
-    class="chart-panel overflow-hidden rounded-xl border border-gray-800 bg-gray-900 shadow-xl shadow-black/20"
+    class="chart-panel overflow-hidden rounded-xl border border-binance-border bg-binance-surface shadow-xl shadow-black/20"
   >
     <div
-      class="flex min-h-14 items-center justify-between gap-4 border-b border-gray-800 bg-gray-900/80 px-4"
+      class="flex min-h-14 items-center justify-between gap-4 border-b border-binance-border bg-binance-surface/80 px-4"
     >
       <div class="flex gap-2" aria-label="Chart controls">
         <div class="flex gap-2" aria-label="Chart timeframe">

@@ -7,7 +7,7 @@ defineProps<{ isFullscreen: boolean }>()
 <template>
   <button
     type="button"
-    class="rounded p-2 text-gray-300 hover:bg-gray-800 hover:text-white"
+    class="rounded p-2 text-binance-muted hover:bg-binance-hover hover:text-binance-text"
     :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
     :title="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
   >

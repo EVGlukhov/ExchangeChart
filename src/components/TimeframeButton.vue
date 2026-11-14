@@ -11,8 +11,8 @@ defineProps<{
     :class="[
       'rounded px-2.5 py-1.5 text-sm uppercase transition-colors',
       pressed
-        ? 'bg-gray-700 text-amber-400'
-        : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100',
+        ? 'bg-binance-hover text-binance-accent'
+        : 'text-binance-muted hover:bg-binance-hover hover:text-binance-text',
     ]"
   >
     <slot />
