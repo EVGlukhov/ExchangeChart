@@ -5,5 +5,6 @@ import svgLoader from 'vite-svg-loader'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/ExchangeChart/',
   plugins: [vue(), tailwindcss(), svgLoader()],
 })
