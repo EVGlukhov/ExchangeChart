@@ -13,6 +13,16 @@ export interface ChartCursor {
   y: number
 }
 
+/**
+ * Redraws the entire canvas chart: axes, candles, volume bars, and the crosshair
+ * when the cursor is over the chart. The canvas dimensions account for the
+ * display pixel ratio.
+ *
+ * @param element The canvas element to render into.
+ * @param candles The candles displayed on the chart.
+ * @param cursor The cursor position in local coordinates, or `null`.
+ * @param chartTheme The chart colors and font settings.
+ */
 export function renderChart(
   element: HTMLCanvasElement,
   candles: readonly Candle[],
@@ -46,6 +56,16 @@ export function renderChart(
   }
 }
 
+/**
+ * Draws the volume scale grid and labels, as well as the top boundary of the
+ * volume panel.
+ *
+ * @param context The canvas 2D rendering context.
+ * @param scales The calculated price, time, and volume scales.
+ * @param width The canvas width in CSS pixels.
+ * @param height The canvas height in CSS pixels.
+ * @param chartTheme The chart colors and font settings.
+ */
 function drawVolumeAxis(
   context: CanvasRenderingContext2D,
   scales: NonNullable<ReturnType<typeof createChartScales>>,
@@ -85,6 +105,17 @@ function drawVolumeAxis(
   context.stroke()
 }
 
+/**
+ * Draws each candle's volume in the lower panel, choosing the bar color based
+ * on price direction.
+ *
+ * @param context The canvas 2D rendering context.
+ * @param candles The candles and their volumes to display.
+ * @param scales The calculated chart scales.
+ * @param width The canvas width, used to calculate bar width.
+ * @param height The canvas height, used to position the volume panel.
+ * @param chartTheme The chart colors.
+ */
 function drawVolume(
   context: CanvasRenderingContext2D,
   candles: readonly Candle[],
@@ -130,6 +161,16 @@ function drawVolume(
   context.restore()
 }
 
+/**
+ * Draws the dashed vertical and horizontal crosshair lines only when the cursor
+ * is inside the chart's plotting area.
+ *
+ * @param context The canvas 2D rendering context.
+ * @param cursor The cursor position in local canvas coordinates.
+ * @param scales The scales that define the chart's plotting boundaries.
+ * @param height The canvas height, used to calculate the bottom of the plotting area.
+ * @param chartTheme The crosshair color and line style.
+ */
 function drawCrosshair(
   context: CanvasRenderingContext2D,
   cursor: ChartCursor,
@@ -160,6 +201,15 @@ function drawCrosshair(
   context.restore()
 }
 
+/**
+ * Draws candles with wicks from low to high and bodies between open and close.
+ *
+ * @param context The canvas 2D rendering context.
+ * @param candles The candles to display.
+ * @param scales The time and price scales.
+ * @param width The canvas width, used to calculate candle body width.
+ * @param chartTheme The colors for rising and falling candles.
+ */
 function drawCandles(
   context: CanvasRenderingContext2D,
   candles: readonly Candle[],
@@ -199,6 +249,14 @@ function drawCandles(
   }
 }
 
+/**
+ * Draws the horizontal grid and price-axis labels to the right of the chart area.
+ *
+ * @param context The canvas 2D rendering context.
+ * @param scales The scales containing the price-axis ticks.
+ * @param width The canvas width, used to position labels to the right of the chart.
+ * @param chartTheme The grid and text colors, and font settings.
+ */
 function drawPriceAxis(
   context: CanvasRenderingContext2D,
   scales: NonNullable<ReturnType<typeof createChartScales>>,
@@ -228,6 +286,15 @@ function drawPriceAxis(
   }
 }
 
+/**
+ * Draws the time axis and vertical grid. The label format is selected based on
+ * the duration of the displayed range.
+ *
+ * @param context The canvas 2D rendering context.
+ * @param scales The time scale and its domain.
+ * @param height The canvas height, used to position lines and labels.
+ * @param chartTheme The grid color and font settings.
+ */
 function drawTimeAxis(
   context: CanvasRenderingContext2D,
   scales: NonNullable<ReturnType<typeof createChartScales>>,

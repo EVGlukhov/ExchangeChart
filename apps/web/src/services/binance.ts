@@ -7,6 +7,15 @@ import { subscribeWithReconnect } from './reconnectingWebSocket'
 
 const BINANCE_TICKER_24HR_EVENT = '24hrTicker'
 
+/**
+ * Converts a Binance numeric value to a finite number and includes the field
+ * name in the error if the value is missing or invalid.
+ *
+ * @param value A value from a JSON response or WebSocket message.
+ * @param field The Binance field name, used for diagnostics.
+ * @returns The finite numeric value.
+ * @throws {Error} If the value cannot be safely converted to a finite number.
+ */
 function toFiniteNumber(value: unknown, field: string): number {
   const number =
     typeof value === 'number'
@@ -22,6 +31,13 @@ function toFiniteNumber(value: unknown, field: string): number {
   return number
 }
 
+/**
+ * Validates a Binance OHLCV row and converts it to the candle model.
+ *
+ * @param row An unvalidated kline row containing time, OHLC values, and volume.
+ * @returns A validated candle with numeric fields.
+ * @throws {Error} If the row format or its OHLCV values are invalid.
+ */
 function parseKline(row: unknown): Candle {
   if (!Array.isArray(row) || row.length < 6) {
     throw new Error('Invalid Binance kline response')
@@ -48,6 +64,16 @@ function parseKline(row: unknown): Candle {
   return { time, open, high, low, close, volume }
 }
 
+/**
+ * Loads candle history for the selected market and timeframe from the Binance REST API.
+ *
+ * @param market The Binance market symbol, such as `BTCUSDT`.
+ * @param timeframe The Binance candle interval, such as `1h`.
+ * @param signal An optional signal to abort the HTTP request.
+ * @returns Validated candles in the order returned by Binance.
+ * @throws {Error} If the URL is not configured, the request fails, or the data
+ * has an unexpected format.
+ */
 export async function fetchCandles(
   market: Market,
   timeframe: Timeframe,
@@ -81,6 +107,18 @@ export async function fetchCandles(
   return data.map(parseKline)
 }
 
+/**
+ * Subscribes to the Binance kline stream and passes each validated candle to
+ * the caller. Returns a function to cancel the subscription.
+ *
+ * @param market The Binance market symbol.
+ * @param timeframe The candle timeframe.
+ * @param onCandle Callback for a new or updated candle.
+ * @param onError Callback for connection errors or invalid messages.
+ * @param onOpen Optional callback for a successful socket open, including reconnections.
+ * @returns A function that closes the socket and stops reconnection attempts.
+ * @throws {Error} If the base WebSocket URL is not configured.
+ */
 export function subscribeCandles(
   market: Market,
   timeframe: Timeframe,
@@ -121,6 +159,19 @@ export function subscribeCandles(
   return unsubscribe
 }
 
+/**
+ * Subscribes to the public Binance trade stream for the selected market.
+ * Converts exchange messages to `Trade` values and closes the subscription
+ * if message data is invalid.
+ *
+ * @param market The Binance market symbol.
+ * @param handlers Callbacks for trades, errors, and connection open events.
+ * @param handlers.onTrade Called for each validated trade.
+ * @param handlers.onError Called when the socket fails or a message cannot be parsed.
+ * @param handlers.onOpen Optional callback for a successful open, including reconnections.
+ * @returns A function that stops the stream and reconnection attempts.
+ * @throws {Error} If the base WebSocket URL is not configured.
+ */
 export function subscribeTrades(
   market: Market,
   handlers: {
@@ -168,6 +219,18 @@ export function subscribeTrades(
   return unsubscribe
 }
 
+/**
+ * Subscribes to the Binance 24-hour ticker stream and converts messages to
+ * the compact `SpotTicker` model.
+ *
+ * @param market The market symbol for which to receive ticker data.
+ * @param handlers Callbacks for ticker data, errors, and connection open events.
+ * @param handlers.onTicker Called for each valid ticker message.
+ * @param handlers.onError Called when the socket fails or the data is invalid.
+ * @param handlers.onOpen Optional callback for a successful open, including reconnections.
+ * @returns A function that stops the stream and reconnection attempts.
+ * @throws {Error} If the base WebSocket URL is not configured.
+ */
 export function subscribeSpotTicker(
   market: Market,
   handlers: {

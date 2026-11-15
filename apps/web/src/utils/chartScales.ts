@@ -25,10 +25,16 @@ interface ChartSize {
   height: number
 }
 
-export function createChartScales(
-  candles: readonly Candle[],
-  { width, height }: ChartSize,
-): ChartScales | null {
+/**
+ * Calculates the time, price, and volume scales for the current candle series
+ * and canvas dimensions, accounting for margins and the separate volume panel.
+ *
+ * @param candles The candles used to calculate the scale domains.
+ * @param size The canvas size in CSS pixels.
+ * @returns The chart scales, or `null` if there is not enough data or space to render.
+ */
+export function createChartScales(candles: readonly Candle[], size: ChartSize): ChartScales | null {
+  const { width, height } = size
   const { top, right, bottom, left } = CHART_MARGIN
 
   if (

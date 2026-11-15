@@ -6,6 +6,14 @@ import { useChartTheme } from './useChartTheme'
 
 const TOOLTIP_VIEWPORT_PADDING = 8
 
+/**
+ * Finds the candle with the nearest open time in an array sorted by time.
+ * If two candles are equally close, selects the earlier one.
+ *
+ * @param candles Candles sorted by ascending `time`.
+ * @param targetTime The open time in milliseconds to find the nearest candle for.
+ * @returns The nearest candle, or `null` if the array is empty.
+ */
 function findNearestCandle(candles: readonly Candle[], targetTime: number): Candle | null {
   let low = 0
   let high = candles.length
@@ -30,6 +38,16 @@ function findNearestCandle(candles: readonly Candle[], targetTime: number): Cand
   return targetTime - before.time <= after.time - targetTime ? before : after
 }
 
+/**
+ * Creates reactive tooltip state for the candle under the cursor.
+ * Converts the cursor position to a time, selects the nearest candle, and keeps
+ * the tooltip within the canvas bounds.
+ *
+ * @param canvas A reference to the chart canvas, or `null` before the element is created.
+ * @param candles The reactive list of displayed candles.
+ * @param cursor Reactive cursor coordinates in the canvas's local coordinate system.
+ * @returns An object containing the computed tooltip and its CSS position, or `null`.
+ */
 export function useCandleTooltip(
   canvas: Ref<HTMLCanvasElement | null>,
   candles: Ref<Candle[]>,

@@ -7,12 +7,29 @@ type ReconnectingSocketHandlers = {
 const BASE_RETRY_DELAY_MS = 1_000
 const MAX_RETRY_DELAY_MS = 30_000
 
+/**
+ * Maintains a browser WebSocket connection with exponential-backoff retries,
+ * reconnects immediately on the `online` event, and cleans up timers and
+ * listeners when unsubscribed.
+ *
+ * @param url The full URL of the Binance WebSocket stream.
+ * @param handlers Callbacks for socket open, messages, and connection errors.
+ * @param handlers.onOpen Optional callback for a successful socket open.
+ * @param handlers.onMessage Callback for a text message received from the socket.
+ * @param handlers.onError Callback for errors creating, using, or closing the socket.
+ * @returns A function that closes the active socket, cancels the retry timer,
+ * and removes the `online` event listener.
+ */
 export function subscribeWithReconnect(url: URL, handlers: ReconnectingSocketHandlers): () => void {
   let stopped = false
   let socket: WebSocket | undefined
   let retryTimer: ReturnType<typeof setTimeout> | undefined
   let retryAttempt = 0
 
+  /**
+   * Schedules the next connection attempt with capped exponential backoff and
+   * a small random delay.
+   */
   const scheduleReconnect = () => {
     if (stopped || retryTimer !== undefined) return
 
@@ -28,6 +45,10 @@ export function subscribeWithReconnect(url: URL, handlers: ReconnectingSocketHan
     )
   }
 
+  /**
+   * Creates the socket and connects its events to the supplied callbacks.
+   * A constructor error also starts the retry loop.
+   */
   const connect = () => {
     if (stopped) return
 
@@ -46,6 +67,12 @@ export function subscribeWithReconnect(url: URL, handlers: ReconnectingSocketHan
     socket = current
     let errorReported = false
 
+    /**
+     * Prevents the same failure from being reported for both the `error` event
+     * and the subsequent `close` event on the same socket.
+     *
+     * @param error The error to pass to the caller.
+     */
     const reportError = (error: Error) => {
       if (errorReported) return
       errorReported = true
@@ -82,6 +109,10 @@ export function subscribeWithReconnect(url: URL, handlers: ReconnectingSocketHan
     })
   }
 
+  /**
+   * Clears any pending timer and reconnects when network connectivity returns,
+   * provided the socket is neither connecting nor open.
+   */
   const reconnectWhenOnline = () => {
     if (
       stopped ||

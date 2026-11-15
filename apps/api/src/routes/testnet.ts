@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Request, type Response } from 'express'
 import { isSpotSymbol, parseSpotOrder } from '@exchange-chart/shared'
 import {
   cancelTestnetOrder,
@@ -12,91 +12,138 @@ const router = Router()
 
 const SSE_HEARTBEAT_INTERVAL_MS = 20_000
 
-router.get('/account/balances', async (req, res) => {
+/**
+ * Loads the Testnet account balances and returns them to the client.
+ *
+ * @param _request Express request; this route does not require a body or parameters.
+ * @param response Express response containing the balances or an API error.
+ */
+async function getTestnetBalances(_request: Request, response: Response): Promise<void> {
   try {
     const balances = await fetchTestnetBalances()
-    res.json({ balances })
+    response.json({ balances })
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'Unknown error'
     console.error('Testnet balance request failed:', message)
-    res.status(502).json({ error: message })
+    response.status(502).json({ error: message })
   }
-})
+}
 
-router.get('/orders', async (req, res) => {
-  const symbol = req.query.symbol
+/**
+ * Validates the query symbol and loads the open orders for that market.
+ *
+ * @param request Express request with the expected string query parameter `symbol`.
+ * @param response Express response containing the orders or a validation/API error.
+ */
+async function getTestnetOpenOrders(request: Request, response: Response): Promise<void> {
+  const symbol = request.query.symbol
 
   if (!isSpotSymbol(symbol)) {
-    return res.status(400).json({ error: 'Valid symbol is required' })
+    response.status(400).json({ error: 'Valid symbol is required' })
+    return
   }
 
   try {
     const orders = await fetchTestnetOpenOrders(symbol.toUpperCase())
-    return res.json({ orders })
+    response.json({ orders })
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'Unknown error'
     console.error('Testnet open orders request failed:', message)
-    return res.status(502).json({ error: message })
+    response.status(502).json({ error: message })
   }
-})
+}
 
-router.post('/orders', async (req, res) => {
-  const orderRequest = parseSpotOrder(req.body)
+/**
+ * Validates the request body, places a Market or Limit order on Testnet,
+ * and returns the created order.
+ *
+ * @param request Express request whose body is validated by `parseSpotOrder`.
+ * @param response Express response containing the created order or a validation/API error.
+ */
+async function postTestnetOrder(request: Request, response: Response): Promise<void> {
+  const orderRequest = parseSpotOrder(request.body)
 
   if (!orderRequest) {
-    return res.status(400).json({ error: 'Invalid order request' })
+    response.status(400).json({ error: 'Invalid order request' })
+    return
   }
 
   try {
     const order = await placeTestnetOrder(orderRequest)
-    return res.status(201).json({ order })
+    response.status(201).json({ order })
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'Unknown error'
     console.error('Testnet order failed:', message)
-    return res.status(502).json({ error: message })
+    response.status(502).json({ error: message })
   }
-})
+}
 
-router.get('/orders/events', (req, res) => {
-  res.set({
+/**
+ * Opens an SSE response to forward private Binance stream events to the client.
+ * Sends periodic heartbeat comments and releases the subscription when the
+ * HTTP connection closes.
+ *
+ * @param _request Express request; this route does not require parameters.
+ * @param response The long-lived SSE response to the client.
+ */
+function streamTestnetOrderEvents(_request: Request, response: Response): void {
+  response.set({
     'Cache-Control': 'no-cache, no-transform',
     Connection: 'keep-alive',
     'Content-Type': 'text/event-stream',
   })
 
-  res.flushHeaders()
+  response.flushHeaders()
 
   const unsubscribe = subscribeToTestnetUserDataStream((message) => {
-    res.write(`data: ${JSON.stringify(message)}\n\n`)
+    response.write(`data: ${JSON.stringify(message)}\n\n`)
   })
 
   const heartbeat = setInterval(() => {
-    res.write(': keep-alive\n\n')
+    response.write(': keep-alive\n\n')
   }, SSE_HEARTBEAT_INTERVAL_MS)
 
-  res.on('close', () => {
+  response.on('close', () => {
     clearInterval(heartbeat)
     unsubscribe()
   })
-})
+}
 
-router.delete('/orders/:orderId', async (req, res) => {
-  const symbol = req.query.symbol
-  const rawOrderId = req.params.orderId
+/**
+ * Validates the symbol and order ID, then cancels the order on Testnet.
+ *
+ * @param request Express request with `orderId` in the path and `symbol` in the query.
+ * @param response Express response containing the cancellation result or a validation/API error.
+ */
+async function deleteTestnetOrder(request: Request, response: Response): Promise<void> {
+  const symbol = request.query.symbol
+  const rawOrderId = request.params.orderId
   const orderId = Number(rawOrderId)
 
-  if (!isSpotSymbol(symbol) || !/^[1-9]\d*$/.test(rawOrderId) || !Number.isSafeInteger(orderId)) {
-    return res.status(400).json({ error: 'Valid symbol and orderId are required' })
+  if (
+    !isSpotSymbol(symbol) ||
+    typeof rawOrderId !== 'string' ||
+    !/^[1-9]\d*$/.test(rawOrderId) ||
+    !Number.isSafeInteger(orderId)
+  ) {
+    response.status(400).json({ error: 'Valid symbol and orderId are required' })
+    return
   }
 
   try {
     const order = await cancelTestnetOrder(symbol.toUpperCase(), orderId)
-    return res.json({ order })
+    response.json({ order })
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'Unknown error'
     console.error('Testnet order cancellation failed:', message)
-    return res.status(502).json({ error: message })
+    response.status(502).json({ error: message })
   }
-})
+}
+
+router.get('/account/balances', getTestnetBalances)
+router.get('/orders', getTestnetOpenOrders)
+router.post('/orders', postTestnetOrder)
+router.get('/orders/events', streamTestnetOrderEvents)
+router.delete('/orders/:orderId', deleteTestnetOrder)
 
 export default router

@@ -1,5 +1,11 @@
 import type { ChartTheme } from '../types/chartTheme'
 
+/**
+ * Reads CSS custom properties from the root element and assembles the
+ * canvas chart theme.
+ *
+ * @returns The theme object containing colors, font, and tooltip dimensions.
+ */
 export function getChartTheme(): ChartTheme {
   const styles = getComputedStyle(document.documentElement)
 

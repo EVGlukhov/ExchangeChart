@@ -3,6 +3,15 @@ import type { Market, Timeframe } from '../constants/chart'
 import type { Candle } from '../types/candle'
 import { fetchCandles, subscribeCandles } from '../services/binance'
 
+/**
+ * Loads candles for the current market and timeframe, then keeps them up to date
+ * over WebSocket. Aborts the previous request and subscription when either
+ * parameter changes.
+ *
+ * @param market The market as a value, ref, or getter.
+ * @param timeframe The timeframe as a value, ref, or getter.
+ * @returns Reactive candles, loading state, and error message.
+ */
 export function useCandles(
   market: MaybeRefOrGetter<Market>,
   timeframe: MaybeRefOrGetter<Timeframe>,

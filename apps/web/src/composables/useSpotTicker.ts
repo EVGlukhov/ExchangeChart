@@ -3,6 +3,13 @@ import type { Market } from '../constants/chart'
 import type { SpotTicker } from '../types/spotTicker'
 import { subscribeSpotTicker } from '../services/binance'
 
+/**
+ * Subscribes to the selected market's 24-hour ticker and resets the previous
+ * market's state when the selection changes.
+ *
+ * @param market The market as a value, ref, or getter.
+ * @returns Reactive ticker data, connection state, and error message.
+ */
 export function useSpotTicker(market: MaybeRefOrGetter<Market>) {
   const ticker = ref<SpotTicker | null>(null)
   const connected = ref(false)

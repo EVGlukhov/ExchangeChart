@@ -1,9 +1,8 @@
-import { isRecord } from '@exchange-chart/shared'
+import { isRecord, SpotUserDataStreamMessage } from '@exchange-chart/shared'
 import WebSocket, { type RawData } from 'ws'
 import { createTestnetListenKey, keepAliveTestnetListenKey } from './binance'
 
-export type TestnetUserDataMessage =
-  { type: 'connection'; connected: boolean } | { type: 'event'; event: Record<string, unknown> }
+export type TestnetUserDataMessage = SpotUserDataStreamMessage
 
 type Listener = (message: TestnetUserDataMessage) => void
 
@@ -19,6 +18,13 @@ let reconnectTimer: NodeJS.Timeout | undefined
 let keepAliveTimer: NodeJS.Timeout | undefined
 let reconnectAttempt = 0
 
+/**
+ * Broadcasts a connection status or Binance event to all active SSE subscribers.
+ * A subscriber that throws during delivery is removed so it cannot affect
+ * other clients.
+ *
+ * @param message The private stream message to send to subscribers.
+ */
 function publish(message: TestnetUserDataMessage): void {
   for (const listener of listeners) {
     try {
@@ -30,6 +36,10 @@ function publish(message: TestnetUserDataMessage): void {
   }
 }
 
+/**
+ * Schedules a Binance reconnect with exponential backoff capped at the
+ * maximum delay.
+ */
 function scheduleReconnect(): void {
   if (reconnectTimer) return
 
@@ -42,6 +52,12 @@ function scheduleReconnect(): void {
   }, delay)
 }
 
+/**
+ * Converts the supported `ws` raw data formats to UTF-8 text for JSON parsing.
+ *
+ * @param data A WebSocket message in one of the `RawData` formats.
+ * @returns The message contents as text.
+ */
 function decodeMessage(data: RawData): string {
   if (Array.isArray(data)) {
     return Buffer.concat(data).toString('utf-8')
@@ -54,6 +70,15 @@ function decodeMessage(data: RawData): string {
   return data.toString('utf-8')
 }
 
+/**
+ * Builds the private Binance WebSocket URL and verifies that it points to
+ * Spot Testnet rather than Mainnet or an arbitrary server.
+ *
+ * @param listenKey The stream key returned by the Testnet REST API.
+ * @returns The WebSocket URL for the specified listenKey.
+ * @throws {Error} If the environment variable is missing, the URL is invalid,
+ * or its origin does not match Testnet.
+ */
 function getTestnetWebSocketUrl(listenKey: string): URL {
   const baseUrl = process.env.BINANCE_SPOT_TESTNET_WS_BASE_URL
 
@@ -70,6 +95,11 @@ function getTestnetWebSocketUrl(listenKey: string): URL {
   return url
 }
 
+/**
+ * Creates a listenKey and connects to the private Binance User Data Stream.
+ * On open, it starts the keepalive timer; it validates and publishes incoming
+ * JSON events and schedules a reconnect after a close or failure.
+ */
 async function connectToBinance(): Promise<void> {
   if (connecting || socket?.readyState === WebSocket.OPEN || reconnectTimer) return
 
@@ -144,6 +174,13 @@ async function connectToBinance(): Promise<void> {
   }
 }
 
+/**
+ * Adds a listener to the shared Testnet event stream and starts the connection
+ * if it has not started yet.
+ *
+ * @param listener Receives Binance events and connection status updates.
+ * @returns A function that removes this listener; the shared server socket keeps running.
+ */
 export function subscribeToTestnetUserDataStream(listener: Listener): () => void {
   listeners.add(listener)
   publish({ type: 'connection', connected: socket?.readyState === WebSocket.OPEN })
