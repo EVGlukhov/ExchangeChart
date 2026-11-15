@@ -10,8 +10,12 @@
     "build:web": "pnpm --filter @exchange-chart/web build",
     "build:api": "pnpm --filter @exchange-chart/api build",
     "preview": "pnpm --filter @exchange-chart/web preview",
-    "format": "pnpm --filter @exchange-chart/web format",
-    "format:check": "pnpm --filter @exchange-chart/web format:check",
+    "format": "prettier --write . --ignore-unknown",
+    "format:check": "prettier --check . --ignore-unknown",
     "deploy": "pnpm --filter @exchange-chart/web deploy"
+  },
+  "devDependencies": {
+    "prettier": "^3.10.1",
+    "prettier-plugin-tailwindcss": "^0.8.1"
   }
 }

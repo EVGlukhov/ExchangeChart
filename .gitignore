@@ -26,3 +26,8 @@ dist-ssr
 # Local history and generated artifacts
 .history/
 .lh/
+
+# Environment files
+.env
+.env.*
+!.env.example

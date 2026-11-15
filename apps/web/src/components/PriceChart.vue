@@ -1,33 +1,28 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import type { Market, Timeframe } from "../constants/chart";
-import { useCandles } from "../composables/useCandles";
-import { useCanvasChart } from "../composables/useCanvasChart";
-import { useChartCrosshair } from "../composables/useChartCrosshair";
-import { useCandleTooltip } from "../composables/useCandleTooltip";
+import { ref } from 'vue'
+import type { Market, Timeframe } from '../constants/chart'
+import { useCandles } from '../composables/useCandles'
+import { useCanvasChart } from '../composables/useCanvasChart'
+import { useChartCrosshair } from '../composables/useChartCrosshair'
+import { useCandleTooltip } from '../composables/useCandleTooltip'
 
 const props = defineProps<{
-  market: Market;
-  timeframe: Timeframe;
-}>();
+  market: Market
+  timeframe: Timeframe
+}>()
 
-const canvas = ref<HTMLCanvasElement | null>(null);
+const canvas = ref<HTMLCanvasElement | null>(null)
 
 const { candles, loading, error } = useCandles(
   () => props.market,
-  () => props.timeframe
+  () => props.timeframe,
 )
 
-const {
-  cursor,
-  handlePointerMove,
-  handlePointerLeave
-} = useChartCrosshair(canvas)
+const { cursor, handlePointerMove, handlePointerLeave } = useChartCrosshair(canvas)
 
-const { tooltip } = useCandleTooltip(canvas, candles, cursor);
+const { tooltip } = useCandleTooltip(canvas, candles, cursor)
 
 useCanvasChart(canvas, candles, cursor)
-
 </script>
 
 <template>
@@ -39,7 +34,8 @@ useCanvasChart(canvas, candles, cursor)
       @pointermove="handlePointerMove"
       @pointerleave="handlePointerLeave"
     ></canvas>
-    <div v-if="tooltip && !loading && !error"
+    <div
+      v-if="tooltip && !loading && !error"
       :style="tooltip.style"
       class="pointer-events-none absolute z-10 overflow-hidden rounded-md border border-gray-700 bg-gray-900 p-3 text-xs text-gray-200 shadow-lg"
       role="tooltip"

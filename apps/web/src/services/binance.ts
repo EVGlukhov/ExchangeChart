@@ -1,3 +1,4 @@
+import { isRecord } from '@exchange-chart/shared'
 import { TRADE_SIDE, type Market, type Timeframe } from '../constants/chart'
 import type { Candle } from '../types/candle'
 import type { SpotTicker } from '../types/spotTicker'
@@ -18,10 +19,6 @@ function toFiniteNumber(value: unknown, field: string): number {
   }
 
   return number
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 function parseKline(row: unknown): Candle {

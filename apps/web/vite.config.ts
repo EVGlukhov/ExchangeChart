@@ -7,4 +7,12 @@ import svgLoader from 'vite-svg-loader'
 export default defineConfig({
   base: '/ExchangeChart/',
   plugins: [vue(), tailwindcss(), svgLoader()],
+  server: {
+    proxy: {
+      '/api/testnet': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+    },
+  },
 })
