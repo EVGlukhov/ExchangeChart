@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@exchange-chart/shared": "workspace:*",
+    "@types/ws": "^8.18.2",
     "dotenv": "^18.0.10",
     "express": "^5.3.0",
     "ws": "^8.23.0"

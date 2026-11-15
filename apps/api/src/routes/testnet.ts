@@ -6,8 +6,11 @@ import {
   fetchTestnetOpenOrders,
   placeTestnetOrder,
 } from '../binance'
+import { subscribeToTestnetUserDataStream } from '../userDataStream'
 
 const router = Router()
+
+const SSE_HEARTBEAT_INTERVAL_MS = 20_000
 
 router.get('/account/balances', async (req, res) => {
   try {
@@ -52,6 +55,29 @@ router.post('/orders', async (req, res) => {
     console.error('Testnet order failed:', message)
     return res.status(502).json({ error: message })
   }
+})
+
+router.get('/orders/events', (req, res) => {
+  res.set({
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'Content-Type': 'text/event-stream',
+  })
+
+  res.flushHeaders()
+
+  const unsubscribe = subscribeToTestnetUserDataStream((message) => {
+    res.write(`data: ${JSON.stringify(message)}\n\n`)
+  })
+
+  const heartbeat = setInterval(() => {
+    res.write(': keep-alive\n\n')
+  }, SSE_HEARTBEAT_INTERVAL_MS)
+
+  res.on('close', () => {
+    clearInterval(heartbeat)
+    unsubscribe()
+  })
 })
 
 router.delete('/orders/:orderId', async (req, res) => {
