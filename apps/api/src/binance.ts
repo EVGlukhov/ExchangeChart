@@ -146,3 +146,51 @@ export async function fetchTestnetOpenOrders(symbol: string): Promise<SpotOpenOr
     }
   })
 }
+
+async function requestTestnetUserDataStream(method: 'POST' | 'PUT', listenKey?: string) {
+  const baseUrl = requiredEnv('BINANCE_SPOT_TESTNET_BASE_URL')
+
+  if (new URL(baseUrl).origin !== 'https://testnet.binance.vision') {
+    throw new Error('Binance base URL must be the Spot Testnet')
+  }
+
+  const url = new URL('/api/v3/userDataStream', baseUrl)
+
+  if (listenKey) {
+    url.searchParams.set('listenKey', listenKey)
+  }
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'X-MBX-APIKEY': requiredEnv('BINANCE_SPOT_TESTNET_API_KEY'),
+    },
+    signal: AbortSignal.timeout(10_000),
+  })
+
+  const responseText = await response.text()
+  const data: unknown = responseText ? JSON.parse(responseText) : null
+
+  if (!response.ok) {
+    const message =
+      isRecord(data) && typeof data.msg === 'string' ? data.msg : `HTTP ${response.status}`
+
+    throw new Error(`Binance Testnet user stream request failed: ${message}`)
+  }
+
+  return data
+}
+
+export async function createTestnetListenKey(): Promise<string> {
+  const data = await requestTestnetUserDataStream('POST')
+
+  if (!isRecord(data) || typeof data.listenKey !== 'string' || data.listenKey.length === 0) {
+    throw new Error('Unexpected Binance Testnet listenKey response')
+  }
+
+  return data.listenKey
+}
+
+export async function keepAliveTestnetListenKey(listenKey: string): Promise<void> {
+  await requestTestnetUserDataStream('PUT', listenKey)
+}
