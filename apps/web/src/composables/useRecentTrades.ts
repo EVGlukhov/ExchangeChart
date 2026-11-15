@@ -24,6 +24,7 @@ export function useRecentTrades(market: MaybeRefOrGetter<Market>) {
           },
           onOpen() {
             connected.value = true
+            error.value = ''
           },
           onError(cause) {
             connected.value = false

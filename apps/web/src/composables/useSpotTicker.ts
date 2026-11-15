@@ -22,6 +22,7 @@ export function useSpotTicker(market: MaybeRefOrGetter<Market>) {
           },
           onOpen() {
             connected.value = true
+            error.value = ''
           },
           onError(cause) {
             connected.value = false

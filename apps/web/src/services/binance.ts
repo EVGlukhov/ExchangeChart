@@ -3,6 +3,7 @@ import { TRADE_SIDE, type Market, type Timeframe } from '../constants/chart'
 import type { Candle } from '../types/candle'
 import type { SpotTicker } from '../types/spotTicker'
 import type { Trade } from '../types/trade'
+import { subscribeWithReconnect } from './reconnectingWebSocket'
 
 const BINANCE_TICKER_24HR_EVENT = '24hrTicker'
 
@@ -85,6 +86,7 @@ export function subscribeCandles(
   timeframe: Timeframe,
   onCandle: (candle: Candle) => void,
   onError: (error: Error) => void,
+  onOpen?: () => void,
 ): () => void {
   const baseUrl = import.meta.env.VITE_BINANCE_WS_BASE_URL
 
@@ -94,46 +96,29 @@ export function subscribeCandles(
 
   const streamName = `${market.toLowerCase()}@kline_${timeframe}`
   const url = new URL(`/ws/${streamName}`, baseUrl)
-  const socket = new WebSocket(url)
-  let closed = false
+  let unsubscribe = () => {}
 
-  const cleanup = () => {
-    closed = true
-    socket.close()
-  }
+  unsubscribe = subscribeWithReconnect(url, {
+    onOpen,
+    onError,
+    onMessage(data) {
+      try {
+        const message: unknown = JSON.parse(data)
 
-  socket.addEventListener('message', (event: MessageEvent<string>) => {
-    try {
-      const message: unknown = JSON.parse(event.data)
+        if (!isRecord(message) || message.e !== 'kline' || !isRecord(message.k)) {
+          throw new Error('Unexpected Binance WebSocket message')
+        }
 
-      if (!isRecord(message) || message.e !== 'kline' || !isRecord(message.k)) {
-        throw new Error('Unexpected Binance WebSocket message')
+        const kline = message.k
+        onCandle(parseKline([kline.t, kline.o, kline.h, kline.l, kline.c, kline.v]))
+      } catch (cause) {
+        onError(cause instanceof Error ? cause : new Error('Invalid Binance WebSocket data'))
+        unsubscribe()
       }
-
-      const kline = message.k
-      onCandle(parseKline([kline.t, kline.o, kline.h, kline.l, kline.c, kline.v]))
-    } catch (cause) {
-      onError(cause instanceof Error ? cause : new Error('Invalid Binance WebSocket data'))
-      cleanup()
-    }
-  })
-
-  socket.addEventListener(
-    'error',
-    () => {
-      onError(new Error('Binance WebSocket connection failed'))
-      cleanup()
     },
-    { once: true },
-  )
-
-  socket.addEventListener('close', () => {
-    if (!closed) {
-      onError(new Error('Binance WebSocket connection closed'))
-    }
   })
 
-  return cleanup
+  return unsubscribe
 }
 
 export function subscribeTrades(
@@ -151,58 +136,36 @@ export function subscribeTrades(
   }
 
   const url = new URL(`/ws/${market.toLowerCase()}@trade`, baseUrl)
-  const socket = new WebSocket(url)
-  let disposed = false
+  let unsubscribe = () => {}
 
-  const cleanup = () => {
-    disposed = true
-    if (socket.readyState < WebSocket.CLOSED) socket.close()
-  }
+  unsubscribe = subscribeWithReconnect(url, {
+    onOpen: handlers.onOpen,
+    onError: handlers.onError,
+    onMessage(data) {
+      try {
+        const message: unknown = JSON.parse(data)
 
-  const fail = (error: Error) => {
-    if (disposed) return
-    handlers.onError(error)
-    cleanup()
-  }
+        if (!isRecord(message) || message.e !== 'trade' || typeof message.m !== 'boolean') {
+          throw new Error('Unexpected Binance trade message')
+        }
 
-  socket.addEventListener('open', () => {
-    if (!disposed) handlers.onOpen?.()
-  })
+        const trade: Trade = {
+          id: toFiniteNumber(message.t, 'trade id'),
+          time: toFiniteNumber(message.T, 'trade time'),
+          price: toFiniteNumber(message.p, 'trade price'),
+          quantity: toFiniteNumber(message.q, 'trade quantity'),
+          side: message.m ? TRADE_SIDE.SELL : TRADE_SIDE.BUY,
+        }
 
-  socket.addEventListener('message', (event: MessageEvent<string>) => {
-    try {
-      const message: unknown = JSON.parse(event.data)
-
-      if (!isRecord(message) || message.e !== 'trade' || typeof message.m !== 'boolean') {
-        throw new Error('Unexpected Binance trade message')
+        handlers.onTrade(trade)
+      } catch (cause) {
+        handlers.onError(cause instanceof Error ? cause : new Error('Invalid Binance trade data'))
+        unsubscribe()
       }
-
-      const trade: Trade = {
-        id: toFiniteNumber(message.t, 'trade id'),
-        time: toFiniteNumber(message.T, 'trade time'),
-        price: toFiniteNumber(message.p, 'trade price'),
-        quantity: toFiniteNumber(message.q, 'trade quantity'),
-        side: message.m ? TRADE_SIDE.SELL : TRADE_SIDE.BUY,
-      }
-
-      handlers.onTrade(trade)
-    } catch (cause) {
-      fail(cause instanceof Error ? cause : new Error('Invalid Binance trade data'))
-    }
+    },
   })
 
-  socket.addEventListener('error', () => {
-    fail(new Error('Binance trade stream connection failed'))
-  })
-
-  socket.addEventListener('close', () => {
-    if (!disposed) {
-      disposed = true
-      handlers.onError(new Error('Binance trade stream connection closed'))
-    }
-  })
-
-  return cleanup
+  return unsubscribe
 }
 
 export function subscribeSpotTicker(
@@ -220,54 +183,34 @@ export function subscribeSpotTicker(
   }
 
   const url = new URL(`/ws/${market.toLowerCase()}@ticker`, baseUrl)
-  const socket = new WebSocket(url)
-  let disposed = false
+  let unsubscribe = () => {}
 
-  const cleanup = () => {
-    disposed = true
-    if (socket.readyState < WebSocket.CLOSED) socket.close()
-  }
+  unsubscribe = subscribeWithReconnect(url, {
+    onOpen: handlers.onOpen,
+    onError: handlers.onError,
+    onMessage(data) {
+      try {
+        const message: unknown = JSON.parse(data)
 
-  const fail = (error: Error) => {
-    if (disposed) return
-    handlers.onError(error)
-    cleanup()
-  }
+        if (!isRecord(message) || message.e !== BINANCE_TICKER_24HR_EVENT || message.s !== market) {
+          throw new Error('Unexpected Binance Spot ticker message')
+        }
 
-  socket.addEventListener('open', () => {
-    if (!disposed) handlers.onOpen?.()
-  })
-
-  socket.addEventListener('message', (event: MessageEvent) => {
-    try {
-      const message: unknown = JSON.parse(event.data)
-
-      if (!isRecord(message) || message.e !== BINANCE_TICKER_24HR_EVENT || message.s !== market) {
-        throw new Error('Unexpected Binance Spot ticker message')
+        handlers.onTicker({
+          lastPrice: toFiniteNumber(message.c, 'ticker price'),
+          changePercent: toFiniteNumber(message.P, '24h change'),
+          highPrice: toFiniteNumber(message.h, '24h high'),
+          lowPrice: toFiniteNumber(message.l, '24h low'),
+          quoteVolume: toFiniteNumber(message.q, '24h quote volume'),
+        })
+      } catch (cause) {
+        handlers.onError(
+          cause instanceof Error ? cause : new Error('Invalid Binance Spot ticker data'),
+        )
+        unsubscribe()
       }
-
-      handlers.onTicker({
-        lastPrice: toFiniteNumber(message.c, 'ticker price'),
-        changePercent: toFiniteNumber(message.P, '24h change'),
-        highPrice: toFiniteNumber(message.h, '24h high'),
-        lowPrice: toFiniteNumber(message.l, '24h low'),
-        quoteVolume: toFiniteNumber(message.q, '24h quote volume'),
-      })
-    } catch (cause) {
-      fail(cause instanceof Error ? cause : new Error('Invalid Binance Spot ticker data'))
-    }
+    },
   })
 
-  socket.addEventListener('error', () => {
-    fail(new Error('Binance Spot ticker connection failed'))
-  })
-
-  socket.addEventListener('close', () => {
-    if (!disposed) {
-      disposed = true
-      handlers.onError(new Error('Binance Spot ticker connection closed'))
-    }
-  })
-
-  return cleanup
+  return unsubscribe
 }

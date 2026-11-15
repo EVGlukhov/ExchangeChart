@@ -47,6 +47,9 @@ export function useCandles(
           (cause) => {
             error.value = cause.message
           },
+          () => {
+            error.value = ''
+          },
         )
       } catch (cause) {
         if (controller.signal.aborted) return
