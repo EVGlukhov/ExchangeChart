@@ -8,6 +8,7 @@ import type { ChartTheme } from './types/chartTheme.ts'
 import { getChartTheme } from './utils/getChartTheme.ts'
 import { chartThemeKey } from './di/chartThemeKey.ts'
 import OpenOrders from './components/OpenOrders.vue'
+import OrderEntry from './components/OrderEntry.vue'
 
 const market = ref<Market>(MARKET.BTC_USDT)
 const timeframe = ref<Timeframe>(TIMEFRAME.HOUR_1)
@@ -23,6 +24,7 @@ provide(chartThemeKey, chartTheme)
         <div class="grid min-w-208 grid-cols-[minmax(0,1fr)_14rem] gap-4">
           <ChartPanel v-model="timeframe" :market="market" />
           <RecentTrades :market="market" />
+          <OrderEntry class="col-span-2" :market="market" />
           <OpenOrders class="col-span-2" :market="market" />
         </div>
       </div>

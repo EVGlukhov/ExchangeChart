@@ -1,7 +1,10 @@
 import {
   isRecord,
+  isSpotBalance,
   isSpotOpenOrder,
+  type SpotBalance,
   type SpotOpenOrder,
+  type SpotOrderRequest,
   type SpotUserDataStreamMessage,
 } from '@exchange-chart/shared'
 import type { Market } from '../constants/chart'
@@ -176,4 +179,55 @@ export function subscribeTestnetUserDataStream(handlers: {
   source.onerror = handleError
 
   return unsubscribe
+}
+
+/**
+ * Places a Spot Testnet order through the local API.
+ *
+ * @param order A validated Market or Limit order request.
+ * @returns The ID of the created order.
+ * @throws {Error} If the request fails or the response has an invalid shape.
+ */
+export async function placeTestnetOrder(order: SpotOrderRequest): Promise<number> {
+  const data = await requestJson('/api/testnet/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(order),
+  })
+
+  if (
+    !isRecord(data) ||
+    !isRecord(data.order) ||
+    typeof data.order.orderId !== 'number' ||
+    !Number.isSafeInteger(data.order.orderId)
+  ) {
+    throw new Error('Invalid order response from Testnet API')
+  }
+
+  return data.order.orderId
+}
+
+/**
+ * Loads and validates Spot Testnet account balances.
+ *
+ * @param signal An optional signal to abort the request.
+ * @returns The account's validated balances.
+ * @throws {Error} If the API response has an unexpected shape.
+ */
+export async function fetchTestnetBalances(signal?: AbortSignal): Promise<SpotBalance[]> {
+  const data = await requestJson('/api/testnet/account/balances', { signal })
+
+  if (!isRecord(data) || !Array.isArray(data.balances)) {
+    throw new Error('Invalid balances response from Testnet API')
+  }
+
+  const balances: unknown[] = data.balances
+
+  return balances.map((balance, index) => {
+    if (!isSpotBalance(balance)) {
+      throw new Error(`Invalid balance at index ${index}`)
+    }
+
+    return balance
+  })
 }
