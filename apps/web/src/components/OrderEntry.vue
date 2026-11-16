@@ -14,6 +14,9 @@ import {
 } from '@exchange-chart/shared'
 import { fetchTestnetBalances, placeTestnetOrder } from '../services/testnet'
 import { useSpotTicker } from '../composables/useSpotTicker'
+import FormInput from './controls/FormInput.vue'
+import FormButton from './controls/FormButton.vue'
+import FormSelect from './controls/FormSelect.vue'
 
 const props = defineProps<{ market: Market }>()
 
@@ -77,6 +80,22 @@ const exceedsAvailableBalance = computed(() => {
 
   return available !== null && required !== null && required > available
 })
+
+const sideOptions: { label: string; value: SpotOrderSide }[] = [
+  { label: 'Buy', value: ORDER_SIDE.BUY },
+  { label: 'Sell', value: ORDER_SIDE.SELL },
+]
+
+const orderTypeOptions: { label: string; value: SpotOrderType }[] = [
+  { label: 'Limit', value: ORDER_TYPE.LIMIT },
+  { label: 'Market', value: ORDER_TYPE.MARKET },
+]
+
+const timeInForceOptions: { label: string; value: SpotTimeInForce }[] = [
+  { label: 'GTC', value: TIME_IN_FORCE.GTC },
+  { label: 'IOC', value: TIME_IN_FORCE.IOC },
+  { label: 'FOK', value: TIME_IN_FORCE.FOK },
+]
 
 const numberFormatter = new Intl.NumberFormat(undefined, {
   maximumSignificantDigits: 8,
@@ -219,73 +238,39 @@ onMounted(() => {
       class="grid items-end gap-3 p-3 sm:grid-cols-2 lg:grid-cols-6"
       @submit.prevent="submitOrder"
     >
-      <label class="text-binance-muted block text-xs">
-        Side
-        <select
-          v-model="side"
-          class="border-binance-border bg-binance-panel text-binance-text mt-1 w-full rounded border px-2 py-2"
-        >
-          <option :value="ORDER_SIDE.BUY">Buy</option>
-          <option :value="ORDER_SIDE.SELL">Sell</option>
-        </select>
-      </label>
+      <FormSelect v-model="side" label="Side" :options="sideOptions" />
 
-      <label class="text-binance-muted block text-xs">
-        Type
-        <select
-          v-model="type"
-          class="border-binance-border bg-binance-panel text-binance-text mt-1 w-full rounded border px-2 py-2"
-        >
-          <option :value="ORDER_TYPE.LIMIT">Limit</option>
-          <option :value="ORDER_TYPE.MARKET">Market</option>
-        </select>
-      </label>
+      <FormSelect v-model="type" label="Type" :options="orderTypeOptions" />
 
-      <label class="text-binance-muted block text-xs">
-        Quantity
-        <input
-          v-model.trim="quantity"
-          type="text"
-          inputmode="decimal"
-          autocomplete="off"
-          required
-          placeholder="0.001"
-          class="border-binance-border bg-binance-panel text-binance-text mt-1 w-full rounded border px-2 py-2"
-        />
-      </label>
+      <FormInput
+        v-model.trim="quantity"
+        label="Quantity"
+        inputmode="decimal"
+        autocomplete="off"
+        required
+        placeholder="0.001"
+      />
 
-      <label v-if="type === ORDER_TYPE.LIMIT" class="text-binance-muted block text-xs">
-        Price (USDT)
-        <input
-          v-model.trim="price"
-          type="text"
-          inputmode="decimal"
-          autocomplete="off"
-          required
-          placeholder="0.00"
-          class="border-binance-border bg-binance-panel text-binance-text mt-1 w-full rounded border px-2 py-2"
-        />
-      </label>
+      <FormInput
+        v-if="type === ORDER_TYPE.LIMIT"
+        v-model.trim="price"
+        label="Price (USDT)"
+        inputmode="decimal"
+        autocomplete="off"
+        required
+        placeholder="0.00"
+      />
 
-      <label v-if="type === ORDER_TYPE.LIMIT" class="text-binance-muted block text-xs">
-        Time in force
-        <select
-          v-model="timeInForce"
-          class="border-binance-border bg-binance-panel text-binance-text mt-1 w-full rounded border px-2 py-2"
-        >
-          <option :value="TIME_IN_FORCE.GTC">GTC</option>
-          <option :value="TIME_IN_FORCE.IOC">IOC</option>
-          <option :value="TIME_IN_FORCE.FOK">FOK</option>
-        </select>
-      </label>
+      <FormSelect
+        v-if="type === ORDER_TYPE.LIMIT"
+        v-model="timeInForce"
+        label="Time in force"
+        :options="timeInForceOptions"
+      />
 
-      <button
-        type="submit"
-        :disabled="submitting"
-        class="bg-binance-accent text-binance-page rounded px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-      >
+      <FormButton type="submit" :disabled="submitting">
         {{ submitting ? 'Submitting...' : `Place ${side} order` }}
-      </button>
+      </FormButton>
     </form>
 
     <div class="text-binance-muted px-3 pb-3 text-xs">
