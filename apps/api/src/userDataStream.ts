@@ -1,6 +1,7 @@
 import { isRecord, SpotUserDataStreamMessage } from '@exchange-chart/shared'
 import WebSocket, { type RawData } from 'ws'
-import { createTestnetListenKey, keepAliveTestnetListenKey } from './binance'
+import { createTestnetUserDataStreamSubscriptionRequest } from './binance'
+import { randomUUID } from 'node:crypto'
 
 export type TestnetUserDataMessage = SpotUserDataStreamMessage
 
@@ -11,17 +12,17 @@ const listeners = new Set<Listener>()
 const BASE_RETRY_DELAY_MS = 1_000
 const MAX_RETRY_DELAY_MS = 30_000
 const MAX_BACKOFF_LEVEL = 5
+const SUBSCRIPTION_TIMEOUT_MS = 10_000
 
 let socket: WebSocket | undefined
 let connecting = false
+let subscribed = false
 let reconnectTimer: NodeJS.Timeout | undefined
-let keepAliveTimer: NodeJS.Timeout | undefined
+let subscriptionTimer: NodeJS.Timeout | undefined
 let reconnectAttempt = 0
 
 /**
  * Broadcasts a connection status or Binance event to all active SSE subscribers.
- * A subscriber that throws during delivery is removed so it cannot affect
- * other clients.
  *
  * @param message The private stream message to send to subscribers.
  */
@@ -48,8 +49,18 @@ function scheduleReconnect(): void {
 
   reconnectTimer = setTimeout(() => {
     reconnectTimer = undefined
-    void connectToBinance()
+    connectToBinance()
   }, delay)
+}
+
+/**
+ * Clears the timer waiting for Binance to acknowledge the stream subscription.
+ */
+function clearSubscriptionTimer(): void {
+  if (!subscriptionTimer) return
+
+  clearTimeout(subscriptionTimer)
+  subscriptionTimer = undefined
 }
 
 /**
@@ -71,85 +82,114 @@ function decodeMessage(data: RawData): string {
 }
 
 /**
- * Builds the private Binance WebSocket URL and verifies that it points to
- * Spot Testnet rather than Mainnet or an arbitrary server.
+ * Validates the configured Binance Spot Testnet WebSocket API URL.
  *
- * @param listenKey The stream key returned by the Testnet REST API.
- * @returns The WebSocket URL for the specified listenKey.
- * @throws {Error} If the environment variable is missing, the URL is invalid,
- * or its origin does not match Testnet.
+ * @returns The validated Testnet WebSocket API URL.
+ * @throws {Error} If the URL is missing, invalid, or does not point to Testnet.
  */
-function getTestnetWebSocketUrl(listenKey: string): URL {
+function getTestnetWebSocketUrl(): URL {
   const baseUrl = process.env.BINANCE_SPOT_TESTNET_WS_BASE_URL
 
   if (!baseUrl) {
     throw new Error('Missing environment variable: BINANCE_SPOT_TESTNET_WS_BASE_URL')
   }
 
-  const url = new URL(`/ws/${encodeURIComponent(listenKey)}`, baseUrl)
+  const url = new URL(baseUrl)
 
-  if (url.origin !== 'wss://stream.testnet.binance.vision') {
-    throw new Error('Binance WebSocket URL must be the Spot Testnet')
+  if (
+    url.origin !== 'wss://ws-api.testnet.binance.vision' ||
+    url.pathname !== '/ws-api/v3' ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error('Binance WebSocket URL must be the Spot Testnet WebSocket API endpoint')
   }
 
   return url
 }
 
 /**
- * Creates a listenKey and connects to the private Binance User Data Stream.
- * On open, it starts the keepalive timer; it validates and publishes incoming
- * JSON events and schedules a reconnect after a close or failure.
+ * Connects to the Binance WebSocket API, subscribes to the private account stream,
+ * and forwards account events to active SSE subscribers.
  */
-async function connectToBinance(): Promise<void> {
-  if (connecting || socket?.readyState === WebSocket.OPEN || reconnectTimer) return
+function connectToBinance(): void {
+  if (connecting || subscribed || socket?.readyState === WebSocket.OPEN || reconnectTimer) return
 
   connecting = true
 
   try {
-    const listenKey = await createTestnetListenKey()
-    const currentSocket = new WebSocket(getTestnetWebSocketUrl(listenKey))
+    const request = createTestnetUserDataStreamSubscriptionRequest(randomUUID())
+    const currentSocket = new WebSocket(getTestnetWebSocketUrl())
 
     socket = currentSocket
 
     currentSocket.on('open', () => {
-      connecting = false
-      reconnectAttempt = 0
-      publish({ type: 'connection', connected: true })
+      subscriptionTimer = setTimeout(() => {
+        if (socket === currentSocket && !subscribed) {
+          console.error('Timed out waiting for Binance Testnet stream subscription')
+          currentSocket.close(1011, 'Subscription timed out')
+        }
+      }, SUBSCRIPTION_TIMEOUT_MS)
 
-      keepAliveTimer = setInterval(
-        () => {
-          void keepAliveTestnetListenKey(listenKey).catch((cause: unknown) => {
-            console.error('Failed to keep Testnet user stream alive:', cause)
+      currentSocket.send(JSON.stringify(request), (cause) => {
+        if (!cause) return
 
-            if (currentSocket.readyState === WebSocket.OPEN) {
-              currentSocket.close()
-            }
-          })
-        },
-        30 * 60 * 1_000,
-      )
+        console.error('Failed to send Binance Testnet stream subscription:', cause)
+        currentSocket.close()
+      })
     })
 
     currentSocket.on('message', (data) => {
-      let event: unknown
+      let message: unknown
 
       try {
-        event = JSON.parse(decodeMessage(data))
+        message = JSON.parse(decodeMessage(data))
       } catch (cause) {
-        console.error('Failed to parse Binance Testnet user stream message:', cause)
+        console.error('Failed to parse Binance Testnet WebSocket API message:', cause)
         return
       }
 
-      if (!isRecord(event)) {
-        console.error('Unexpected Binance Testnet user stream event:', event)
+      if (!isRecord(message)) {
+        console.error('Unexpected Binance Testnet WebSocket API message:', message)
         return
+      }
+
+      if (message.id === request.id) {
+        if (
+          message.status !== 200 ||
+          !isRecord(message.result) ||
+          typeof message.result.subscriptionId !== 'number'
+        ) {
+          console.error('Binance Testnet stream subscription failed:', message.error ?? message)
+          currentSocket.close(1011, 'Subscription failed')
+          return
+        }
+
+        clearSubscriptionTimer()
+        connecting = false
+        subscribed = true
+        reconnectAttempt = 0
+        publish({ type: 'connection', connected: true })
+        return
+      }
+
+      if (!isRecord(message.event)) {
+        console.error('Unexpected Binance Testnet stream event:', message)
+        return
+      }
+
+      const event = message.event
+
+      if (event.e === 'serverShutdown') {
+        console.warn('Binance Testnet WebSocket API is shutting down; reconnecting')
+        currentSocket.close(1012, 'Server shutdown')
       }
 
       publish({ type: 'event', event })
     })
 
     currentSocket.on('error', (cause) => {
-      console.error('Binance Testnet user stream error:', cause)
+      console.error('Binance Testnet WebSocket error:', cause)
     })
 
     currentSocket.on('close', () => {
@@ -157,17 +197,14 @@ async function connectToBinance(): Promise<void> {
 
       socket = undefined
       connecting = false
-
-      if (keepAliveTimer) {
-        clearInterval(keepAliveTimer)
-        keepAliveTimer = undefined
-      }
-
+      subscribed = false
+      clearSubscriptionTimer()
       publish({ type: 'connection', connected: false })
       scheduleReconnect()
     })
   } catch (cause) {
     connecting = false
+    subscribed = false
     console.error('Failed to connect to Binance Testnet user stream:', cause)
     publish({ type: 'connection', connected: false })
     scheduleReconnect()
@@ -184,7 +221,7 @@ async function connectToBinance(): Promise<void> {
 export function subscribeToTestnetUserDataStream(listener: Listener): () => void {
   listeners.add(listener)
   publish({ type: 'connection', connected: socket?.readyState === WebSocket.OPEN })
-  void connectToBinance()
+  connectToBinance()
 
   return () => {
     listeners.delete(listener)

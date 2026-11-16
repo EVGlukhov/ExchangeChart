@@ -28,6 +28,31 @@ function requiredEnv(name: string): string {
 }
 
 /**
+ * Creates a signed WebSocket API request for the Testnet User Data Stream.
+ *
+ * @param id The request ID used to match Binance's response.
+ * @returns The signed subscription request.
+ */
+export function createTestnetUserDataStreamSubscriptionRequest(id: string) {
+  const apiKey = requiredEnv('BINANCE_SPOT_TESTNET_API_KEY')
+  const timestamp = Date.now()
+  const signaturePayload = new URLSearchParams({
+    apiKey,
+    timestamp: String(timestamp),
+  }).toString()
+
+  const signature = createHmac('sha256', requiredEnv('BINANCE_SPOT_TESTNET_API_SECRET'))
+    .update(signaturePayload)
+    .digest('hex')
+
+  return {
+    id,
+    method: 'userDataStream.subscribe.signature',
+    params: { apiKey, timestamp, signature },
+  }
+}
+
+/**
  * Sends a signed HMAC request to Binance Spot Testnet.
  * Adds a timestamp and recvWindow, signs the parameters with the API secret,
  * and limits the request duration.
@@ -193,75 +218,4 @@ export async function fetchTestnetOpenOrders(symbol: string): Promise<SpotOpenOr
       status: item.status,
     }
   })
-}
-
-/**
- * Creates or keeps alive a Binance Spot Testnet User Data Stream.
- * This endpoint uses the API key but does not require an HMAC signature.
- *
- * @param method `POST` to create a listenKey or `PUT` to keep it alive.
- * @param listenKey The existing stream key; required for `PUT`.
- * @returns The unvalidated JSON response body, or `null` if the body is empty.
- * @throws {Error} If the base URL is not Testnet, Binance rejects the request,
- * or the response cannot be parsed as JSON.
- */
-async function requestTestnetUserDataStream(method: 'POST' | 'PUT', listenKey?: string) {
-  const baseUrl = requiredEnv('BINANCE_SPOT_TESTNET_BASE_URL')
-
-  if (new URL(baseUrl).origin !== 'https://testnet.binance.vision') {
-    throw new Error('Binance base URL must be the Spot Testnet')
-  }
-
-  const url = new URL('/api/v3/userDataStream', baseUrl)
-
-  if (listenKey) {
-    url.searchParams.set('listenKey', listenKey)
-  }
-
-  const response = await fetch(url, {
-    method,
-    headers: {
-      'X-MBX-APIKEY': requiredEnv('BINANCE_SPOT_TESTNET_API_KEY'),
-    },
-    signal: AbortSignal.timeout(10_000),
-  })
-
-  const responseText = await response.text()
-  const data: unknown = responseText ? JSON.parse(responseText) : null
-
-  if (!response.ok) {
-    const message =
-      isRecord(data) && typeof data.msg === 'string' ? data.msg : `HTTP ${response.status}`
-
-    throw new Error(`Binance Testnet user stream request failed: ${message}`)
-  }
-
-  return data
-}
-
-/**
- * Creates a listenKey for the private Spot Testnet account event stream.
- *
- * @returns The listenKey used by the server to connect to the Binance WebSocket.
- * @throws {Error} If the request fails or Binance does not return a listenKey.
- */
-export async function createTestnetListenKey(): Promise<string> {
-  const data = await requestTestnetUserDataStream('POST')
-
-  if (!isRecord(data) || typeof data.listenKey !== 'string' || data.listenKey.length === 0) {
-    throw new Error('Unexpected Binance Testnet listenKey response')
-  }
-
-  return data.listenKey
-}
-
-/**
- * Keeps a private Binance Spot Testnet stream from expiring.
- *
- * @param listenKey The key previously returned by `createTestnetListenKey`.
- * @returns A promise that resolves after Binance confirms the keepalive request.
- * @throws {Error} If the keepalive request fails.
- */
-export async function keepAliveTestnetListenKey(listenKey: string): Promise<void> {
-  await requestTestnetUserDataStream('PUT', listenKey)
 }
