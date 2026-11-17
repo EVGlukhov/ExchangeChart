@@ -1,6 +1,6 @@
 import { isRecord, SpotUserDataStreamMessage } from '@exchange-chart/shared'
 import WebSocket, { type RawData } from 'ws'
-import { createTestnetUserDataStreamSubscriptionRequest } from './binance'
+import { createTestnetUserDataStreamSubscriptionRequest } from './binance.js'
 import { randomUUID } from 'node:crypto'
 
 export type TestnetUserDataMessage = SpotUserDataStreamMessage

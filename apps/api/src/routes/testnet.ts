@@ -5,8 +5,8 @@ import {
   fetchTestnetBalances,
   fetchTestnetOpenOrders,
   placeTestnetOrder,
-} from '../binance'
-import { subscribeToTestnetUserDataStream } from '../userDataStream'
+} from '../binance.js'
+import { subscribeToTestnetUserDataStream } from '../userDataStream.js'
 
 const router = Router()
 
