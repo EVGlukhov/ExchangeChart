@@ -9,13 +9,14 @@ import {
   type SpotOrderType,
   type SpotTimeInForce,
 } from '@exchange-chart/shared'
-import { placeTestnetOrder } from '../services/testnet'
+import { useTestnetOrder } from '../composables/useTestnetOrder'
 import { useSpotTicker } from '../composables/useSpotTicker'
 import Typography from './ui/Typography.vue'
 import Panel from './layout/Panel.vue'
 import OrderForm from './OrderForm.vue'
 import { formatOrderNumber } from '../utils/formatters'
 import { useOrderBalances } from '../composables/useOrderBalances.ts'
+import OrderBalances from './OrderBalances.vue'
 
 type OrderFormValues = {
   side: SpotOrderSide
@@ -28,9 +29,6 @@ type OrderFormValues = {
 const props = defineProps<{ market: Market }>()
 
 const balanceSide = ref<SpotOrderSide>(ORDER_SIDE.BUY)
-const submitting = ref(false)
-const error = ref('')
-const success = ref('')
 const resetKey = ref(0)
 const lastSubmittedOrder = ref<OrderFormValues | null>(null)
 const estimatedRequired = ref<number | null>(null)
@@ -46,6 +44,8 @@ const {
   availableBalance,
   refreshBalances,
 } = useOrderBalances(() => props.market, balanceSide)
+
+const { submitting, error, success, submit: submitTestnetOrder } = useTestnetOrder()
 
 const { ticker } = useSpotTicker(() => props.market)
 
@@ -74,8 +74,6 @@ function calculateEstimatedRequired(values: OrderFormValues): number | null {
 async function submitOrder(values: OrderFormValues) {
   if (submitting.value) return
 
-  error.value = ''
-  success.value = ''
   balanceSide.value = values.side
   lastSubmittedOrder.value = values
   estimatedRequired.value = calculateEstimatedRequired(values)
@@ -100,21 +98,11 @@ async function submitOrder(values: OrderFormValues) {
     }
   }
 
-  submitting.value = true
+  const placed = await submitTestnetOrder(order)
+  if (!placed) return
 
-  try {
-    const orderId = await placeTestnetOrder(order)
-    success.value = `Order ${orderId} placed successfully.`
-    resetKey.value += 1
-    await refreshBalances()
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : 'Failed to place order.'
-    error.value = message.includes('PERCENT_PRICE_BY_SIDE')
-      ? "The limit price is outside Binance's allowed range for this side. Adjust it closer to the market price."
-      : message
-  } finally {
-    submitting.value = false
-  }
+  resetKey.value += 1
+  await refreshBalances()
 }
 </script>
 
@@ -124,52 +112,15 @@ async function submitOrder(values: OrderFormValues) {
       <Typography variant="caption" tone="muted" class="ml-auto">{{ market }}</Typography>
     </template>
 
-    <div class="border-binance-border grid gap-3 border-b p-3 sm:grid-cols-2">
-      <div class="bg-binance-panel rounded p-3">
-        <div class="flex items-center justify-between gap-2">
-          <Typography as="h3" variant="small" tone="muted"> Available {{ quoteAsset }} </Typography>
-          <button
-            type="button"
-            class="text-binance-accent hover:underline disabled:opacity-50"
-            :disabled="balancesLoading"
-            @click="refreshBalances"
-          >
-            <Typography variant="caption" tone="inherit">
-              {{ balancesLoading ? 'Refreshing...' : 'Refresh' }}
-            </Typography>
-          </button>
-        </div>
-
-        <Typography as="p" variant="heading" numeric class="mt-1">
-          {{ formatOrderNumber(quoteBalance?.free) }}
-        </Typography>
-
-        <Typography as="p" variant="caption" tone="muted" class="mt-1">
-          Locked: {{ formatOrderNumber(quoteBalance?.locked) }}
-        </Typography>
-      </div>
-
-      <div class="bg-binance-panel rounded p-3">
-        <Typography as="h3" variant="small" tone="muted"> Available {{ baseAsset }} </Typography>
-        <Typography as="p" variant="heading" numeric class="mt-1">
-          {{ formatOrderNumber(baseBalance?.free) }}
-        </Typography>
-        <Typography as="p" variant="caption" tone="muted" class="mt-1">
-          Locked: {{ formatOrderNumber(baseBalance?.locked) }}
-        </Typography>
-      </div>
-    </div>
-
-    <Typography
-      v-if="balanceError"
-      as="p"
-      variant="small"
-      tone="sell"
-      class="px-3 pt-2"
-      role="alert"
-    >
-      Could not refresh balances: {{ balanceError }}
-    </Typography>
+    <OrderBalances
+      :balances-loading="balancesLoading"
+      :balance-error="balanceError"
+      :base-asset="baseAsset"
+      :quote-asset="quoteAsset"
+      :base-balance="baseBalance"
+      :quote-balance="quoteBalance"
+      @refresh="refreshBalances"
+    />
 
     <OrderForm :submitting="submitting" :reset-key="resetKey" @submit="submitOrder" />
 
