@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import Typography from '../ui/Typography.vue'
+
 type InputMode = 'decimal' | 'email' | 'none' | 'numeric' | 'search' | 'tel' | 'text' | 'url'
 type InputType = 'email' | 'number' | 'password' | 'search' | 'tel' | 'text' | 'url'
 
@@ -35,8 +37,8 @@ function handleInput(event: Event) {
 </script>
 
 <template>
-  <label class="text-binance-muted block text-xs">
-    {{ label }}
+  <label class="block">
+    <Typography variant="small" tone="muted">{{ label }}</Typography>
     <input
       :value="modelValue"
       :type="type"

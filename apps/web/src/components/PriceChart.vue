@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import Typography from './ui/Typography.vue'
 import type { Market, Timeframe } from '../constants/chart'
 import { useCandles } from '../composables/useCandles'
 import { useCanvasChart } from '../composables/useCanvasChart'
@@ -37,36 +38,66 @@ useCanvasChart(canvas, candles, cursor)
     <div
       v-if="tooltip && !loading && !error"
       :style="tooltip.style"
-      class="pointer-events-none absolute z-10 overflow-hidden rounded-md border border-gray-700 bg-gray-900 p-3 text-xs text-gray-200 shadow-lg"
+      class="pointer-events-none absolute z-10 overflow-hidden rounded-md border border-gray-700 bg-gray-900 p-3 shadow-lg"
       role="tooltip"
     >
-      <p class="mb-2 truncate font-semibold text-gray-100">
+      <Typography as="p" variant="small" tone="emphasis" class="mb-2 truncate font-semibold">
         {{ new Date(tooltip.candle.time).toLocaleString() }}
-      </p>
+      </Typography>
 
       <dl class="grid grid-cols-2 gap-x-4 gap-y-1">
-        <dt class="text-gray-400">Open</dt>
-        <dd class="text-right">{{ tooltip.candle.open }}</dd>
-        <dt class="text-gray-400">High</dt>
-        <dd class="text-right">{{ tooltip.candle.high }}</dd>
-        <dt class="text-gray-400">Low</dt>
-        <dd class="text-right">{{ tooltip.candle.low }}</dd>
-        <dt class="text-gray-400">Close</dt>
-        <dd class="text-right">{{ tooltip.candle.close }}</dd>
+        <dt>
+          <Typography variant="small" tone="subtle">Open</Typography>
+        </dt>
+        <dd class="text-right">
+          <Typography variant="small" tone="neutral">
+            {{ tooltip.candle.open }}
+          </Typography>
+        </dd>
+        <dt>
+          <Typography variant="small" tone="subtle">High</Typography>
+        </dt>
+        <dd class="text-right">
+          <Typography variant="small" tone="neutral">
+            {{ tooltip.candle.high }}
+          </Typography>
+        </dd>
+        <dt>
+          <Typography variant="small" tone="subtle">Low</Typography>
+        </dt>
+        <dd class="text-right">
+          <Typography variant="small" tone="neutral">
+            {{ tooltip.candle.low }}
+          </Typography>
+        </dd>
+        <dt>
+          <Typography variant="small" tone="subtle">Close</Typography>
+        </dt>
+        <dd class="text-right">
+          <Typography variant="small" tone="neutral">
+            {{ tooltip.candle.close }}
+          </Typography>
+        </dd>
       </dl>
     </div>
-    <p
+    <Typography
       v-if="loading"
-      class="pointer-events-none absolute inset-0 grid place-items-center text-sm text-gray-400"
+      as="p"
+      variant="body"
+      tone="subtle"
+      class="pointer-events-none absolute inset-0 grid place-items-center"
       role="status"
     >
       Загружаю свечи...
-    </p>
-    <p
+    </Typography>
+    <Typography
       v-else-if="error"
-      class="pointer-events-none absolute inset-0 grid place-items-center px-4 text-center text-sm text-red-400"
+      as="p"
+      variant="body"
+      tone="sell"
+      class="pointer-events-none absolute inset-0 grid place-items-center px-4 text-center"
     >
       {{ error }}
-    </p>
+    </Typography>
   </div>
 </template>

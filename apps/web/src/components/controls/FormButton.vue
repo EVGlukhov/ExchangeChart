@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import Typography from '../ui/Typography.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -21,7 +22,7 @@ const buttonClasses = computed(() => {
     props.variant === 'primary'
       ? 'bg-binance-accent text-binance-page font-semibold'
       : 'text-binance-accent hover:underline'
-  const sizeClasses = props.size === 'sm' ? 'text-[10px]' : 'rounded px-3 py-2 text-sm'
+  const sizeClasses = props.size === 'sm' ? '' : 'rounded px-3 py-2'
 
   return `${variantClasses} ${sizeClasses}`
 })
@@ -34,6 +35,8 @@ const buttonClasses = computed(() => {
     :class="buttonClasses"
     class="disabled:cursor-not-allowed disabled:opacity-50"
   >
-    <slot />
+    <Typography :variant="size === 'sm' ? 'caption' : 'body'" tone="inherit">
+      <slot />
+    </Typography>
   </button>
 </template>

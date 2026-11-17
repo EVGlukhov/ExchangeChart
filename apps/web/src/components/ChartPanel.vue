@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { TIMEFRAMES, type Timeframe, type Market } from '../constants/chart'
+import { ref } from 'vue'
 import TimeframeButton from './TimeframeButton.vue'
 import FullscreenButton from './FullscreenButton.vue'
 import PriceChart from './PriceChart.vue'
-import { ref } from 'vue'
+import Typography from './ui/Typography.vue'
+import { TIMEFRAMES, type Timeframe, type Market } from '../constants/chart'
 import { useFullscreen } from '../composables/useFullscreen'
 
 defineProps<{ market: Market }>()
@@ -36,8 +37,7 @@ const { isFullscreen, toggleFullscreen } = useFullscreen(panel)
 
         <FullscreenButton :is-fullscreen="isFullscreen" @click="toggleFullscreen()" />
       </div>
-
-      <span class="text-sm font-semibold text-gray-100">{{ market }} / {{ timeframe }}</span>
+      <Typography variant="heading" tone="emphasis">{{ market }} / {{ timeframe }}</Typography>
     </div>
 
     <PriceChart class="chart-content" :market="market" :timeframe="timeframe" />

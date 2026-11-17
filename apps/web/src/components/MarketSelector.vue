@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { MARKETS, type Market } from '../constants/chart'
+import Typography from './ui/Typography.vue'
 
 const market = defineModel<Market>({ required: true })
 </script>
 
 <template>
-  <label
-    class="text-binance-muted flex min-w-0 items-center gap-2 text-[10px] font-medium tracking-wider uppercase"
-  >
-    <span>Market</span>
+  <label class="flex min-w-0 items-center gap-2">
+    <Typography variant="overline" tone="muted">Market</Typography>
     <select
       v-model="market"
       aria-label="Select market"

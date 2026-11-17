@@ -24,6 +24,10 @@
   --color-binance-accent: #f0b90b;
   --color-binance-buy: #0ecb81;
   --color-binance-sell: #f6465d;
+
+  --text-2xs: 0.625rem;
+
+  --tracking-brand-overline: 0.18em;
 }
 
 * {

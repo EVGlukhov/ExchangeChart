@@ -17,6 +17,7 @@ import { useSpotTicker } from '../composables/useSpotTicker'
 import FormInput from './controls/FormInput.vue'
 import FormButton from './controls/FormButton.vue'
 import FormSelect from './controls/FormSelect.vue'
+import Typography from './ui/Typography.vue'
 
 const props = defineProps<{ market: Market }>()
 
@@ -192,47 +193,56 @@ onMounted(() => {
     class="border-binance-border bg-binance-surface text-binance-text overflow-hidden rounded-lg border shadow-sm shadow-black/30"
   >
     <header class="border-binance-border flex h-11 items-center border-b px-3">
-      <h2 class="text-xs font-medium">Place Order</h2>
-      <span class="text-binance-muted ml-auto text-[10px]">{{ market }}</span>
+      <Typography as="h2" variant="small" class="font-medium">Place Order</Typography>
+      <Typography variant="caption" tone="muted" class="ml-auto">{{ market }}</Typography>
     </header>
 
     <div class="border-binance-border grid gap-3 border-b p-3 sm:grid-cols-2">
       <div class="bg-binance-panel rounded p-3">
         <div class="flex items-center justify-between gap-2">
-          <h3 class="text-binance-muted text-xs">Available {{ quoteAsset }}</h3>
+          <Typography as="h3" variant="small" tone="muted"> Available {{ quoteAsset }} </Typography>
           <button
             type="button"
-            class="text-binance-accent text-[10px] hover:underline disabled:opacity-50"
+            class="text-binance-accent hover:underline disabled:opacity-50"
             :disabled="balancesLoading"
             @click="refreshBalances"
           >
-            {{ balancesLoading ? 'Refreshing...' : 'Refresh' }}
+            <Typography variant="caption" tone="inherit">
+              {{ balancesLoading ? 'Refreshing...' : 'Refresh' }}
+            </Typography>
           </button>
         </div>
 
-        <p class="mt-1 text-sm font-semibold tabular-nums">
+        <Typography as="p" variant="heading" numeric class="mt-1">
           {{ formatNumber(quoteBalance?.free) }}
-        </p>
+        </Typography>
 
-        <p class="text-binance-muted mt-1 text-[10px]">
+        <Typography as="p" variant="caption" tone="muted" class="mt-1">
           Locked: {{ formatNumber(quoteBalance?.locked) }}
-        </p>
+        </Typography>
       </div>
 
       <div class="bg-binance-panel rounded p-3">
-        <h3 class="text-binance-muted text-xs">Available {{ baseAsset }}</h3>
-        <p class="mt-1 text-sm font-semibold tabular-nums">
+        <Typography as="h3" variant="small" tone="muted"> Available {{ baseAsset }} </Typography>
+        <Typography as="p" variant="heading" numeric class="mt-1">
           {{ formatNumber(baseBalance?.free) }}
-        </p>
-        <p class="text-binance-muted mt-1 text-[10px]">
+        </Typography>
+        <Typography as="p" variant="caption" tone="muted" class="mt-1">
           Locked: {{ formatNumber(baseBalance?.locked) }}
-        </p>
+        </Typography>
       </div>
     </div>
 
-    <p v-if="balanceError" class="text-binance-sell px-3 pt-2 text-xs" role="alert">
+    <Typography
+      v-if="balanceError"
+      as="p"
+      variant="small"
+      tone="sell"
+      class="px-3 pt-2"
+      role="alert"
+    >
       Could not refresh balances: {{ balanceError }}
-    </p>
+    </Typography>
 
     <form
       class="grid items-end gap-3 p-3 sm:grid-cols-2 lg:grid-cols-6"
@@ -273,26 +283,31 @@ onMounted(() => {
       </FormButton>
     </form>
 
-    <div class="text-binance-muted px-3 pb-3 text-xs">
-      <p v-if="estimatedRequired !== null">
+    <div class="px-3 pb-3">
+      <Typography v-if="estimatedRequired !== null" as="p" variant="small" tone="muted">
         {{ side === ORDER_SIDE.BUY ? 'Estimated funds required' : 'Amount to sell' }}
         {{ formatNumber(estimatedRequired) }} {{ requiredAsset }}
         <span v-if="side === ORDER_SIDE.BUY"> (before fees)</span>
-      </p>
-      <p v-if="type === ORDER_TYPE.MARKET && side === ORDER_SIDE.BUY">
+      </Typography>
+      <Typography
+        v-if="type === ORDER_TYPE.MARKET && side === ORDER_SIDE.BUY"
+        as="p"
+        variant="small"
+        tone="muted"
+      >
         Market-buy estimate uses the latest ticker and may change.
-      </p>
-      <p v-if="exceedsAvailableBalance" class="text-binance-sell" role="status">
+      </Typography>
+      <Typography v-if="exceedsAvailableBalance" as="p" variant="small" tone="sell" role="status">
         Estimate exceeds your available {{ requiredAsset }} balance. Binance will confirm
         availability when the order is submitted.
-      </p>
+      </Typography>
     </div>
 
-    <p v-if="error" class="text-binance-sell px-3 pb-3 text-xs" role="alert">
+    <Typography v-if="error" as="p" variant="small" tone="sell" class="px-3 pb-3" role="alert">
       {{ error }}
-    </p>
-    <p v-if="success" class="text-binance-buy px-3 pb-3 text-xs" role="alert">
+    </Typography>
+    <Typography v-if="success" as="p" variant="small" tone="buy" class="px-3 pb-3" role="alert">
       {{ success }}
-    </p>
+    </Typography>
   </section>
 </template>

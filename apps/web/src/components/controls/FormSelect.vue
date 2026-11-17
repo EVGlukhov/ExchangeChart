@@ -1,4 +1,6 @@
 <script setup lang="ts" generic="T extends string">
+import Typography from '../ui/Typography.vue'
+
 const props = defineProps<{
   label: string
   modelValue: T
@@ -24,8 +26,8 @@ function handleChange(event: Event) {
 </script>
 
 <template>
-  <label class="text-binance-muted block text-xs">
-    {{ label }}
+  <label class="block">
+    <Typography variant="small" tone="muted">{{ label }}</Typography>
     <select
       :value="modelValue"
       :disabled="disabled"
