@@ -1,81 +1,53 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { Market } from '../constants/chart'
 import {
-  isPositiveDecimal,
   ORDER_SIDE,
   ORDER_TYPE,
-  TIME_IN_FORCE,
-  type SpotBalance,
   type SpotOrderRequest,
   type SpotOrderSide,
   type SpotOrderType,
   type SpotTimeInForce,
 } from '@exchange-chart/shared'
-import { fetchTestnetBalances, placeTestnetOrder } from '../services/testnet'
+import { placeTestnetOrder } from '../services/testnet'
 import { useSpotTicker } from '../composables/useSpotTicker'
-import FormInput from './controls/FormInput.vue'
-import FormButton from './controls/FormButton.vue'
-import FormSelect from './controls/FormSelect.vue'
 import Typography from './ui/Typography.vue'
 import Panel from './layout/Panel.vue'
+import OrderForm from './OrderForm.vue'
 import { formatOrderNumber } from '../utils/formatters'
+import { useOrderBalances } from '../composables/useOrderBalances.ts'
+
+type OrderFormValues = {
+  side: SpotOrderSide
+  type: SpotOrderType
+  quantity: string
+  price: string
+  timeInForce: SpotTimeInForce
+}
 
 const props = defineProps<{ market: Market }>()
 
-const side = ref<SpotOrderSide>(ORDER_SIDE.BUY)
-const type = ref<SpotOrderType>(ORDER_TYPE.LIMIT)
-const quantity = ref('')
-const price = ref('')
-const timeInForce = ref<SpotTimeInForce>(TIME_IN_FORCE.GTC)
-
-const balances = ref<SpotBalance[]>([])
-const balancesLoaded = ref(false)
-const balancesLoading = ref(false)
-const balanceError = ref('')
+const balanceSide = ref<SpotOrderSide>(ORDER_SIDE.BUY)
 const submitting = ref(false)
 const error = ref('')
 const success = ref('')
+const resetKey = ref(0)
+const lastSubmittedOrder = ref<OrderFormValues | null>(null)
+const estimatedRequired = ref<number | null>(null)
+
+const {
+  balancesLoading,
+  balanceError,
+  baseAsset,
+  quoteAsset,
+  baseBalance,
+  quoteBalance,
+  requiredAsset,
+  availableBalance,
+  refreshBalances,
+} = useOrderBalances(() => props.market, balanceSide)
 
 const { ticker } = useSpotTicker(() => props.market)
-
-const baseAsset = computed(() => props.market.replace(/USDT$/, ''))
-const quoteAsset = 'USDT'
-
-const baseBalance = computed(() =>
-  balances.value.find((balance) => balance.asset === baseAsset.value),
-)
-const quoteBalance = computed(() => balances.value.find((balance) => balance.asset === quoteAsset))
-
-const requiredAsset = computed(() => (side.value === ORDER_SIDE.BUY ? quoteAsset : baseAsset.value))
-
-const availableBalance = computed<number | null>(() => {
-  if (!balancesLoaded.value) return null
-
-  const balance = side.value === ORDER_SIDE.BUY ? quoteBalance.value : baseBalance.value
-  return Number(balance?.free ?? '0')
-})
-
-const estimatedRequired = computed<number | null>(() => {
-  if (!isPositiveDecimal(quantity.value)) return null
-
-  const quantityValue = Number(quantity.value)
-  if (!Number.isFinite(quantityValue)) return null
-
-  if (side.value === ORDER_SIDE.SELL) return quantityValue
-
-  const referencePrice =
-    type.value === ORDER_TYPE.LIMIT
-      ? isPositiveDecimal(price.value)
-        ? Number(price.value)
-        : null
-      : (ticker.value?.lastPrice ?? null)
-
-  if (referencePrice === null || !Number.isFinite(referencePrice)) return null
-
-  const estimate = quantityValue * referencePrice
-  return Number.isFinite(estimate) ? estimate : null
-})
 
 const exceedsAvailableBalance = computed(() => {
   const available = availableBalance.value
@@ -84,76 +56,47 @@ const exceedsAvailableBalance = computed(() => {
   return available !== null && required !== null && required > available
 })
 
-const sideOptions: { label: string; value: SpotOrderSide }[] = [
-  { label: 'Buy', value: ORDER_SIDE.BUY },
-  { label: 'Sell', value: ORDER_SIDE.SELL },
-]
+function calculateEstimatedRequired(values: OrderFormValues): number | null {
+  const quantityValue = Number(values.quantity)
+  if (!Number.isFinite(quantityValue)) return null
 
-const orderTypeOptions: { label: string; value: SpotOrderType }[] = [
-  { label: 'Limit', value: ORDER_TYPE.LIMIT },
-  { label: 'Market', value: ORDER_TYPE.MARKET },
-]
+  if (values.side === ORDER_SIDE.SELL) return quantityValue
 
-const timeInForceOptions: { label: string; value: SpotTimeInForce }[] = [
-  { label: 'GTC', value: TIME_IN_FORCE.GTC },
-  { label: 'IOC', value: TIME_IN_FORCE.IOC },
-  { label: 'FOK', value: TIME_IN_FORCE.FOK },
-]
+  const referencePrice =
+    values.type === ORDER_TYPE.LIMIT ? Number(values.price) : (ticker.value?.lastPrice ?? null)
 
-/**
- * Loads the latest balance snapshot without discarding the last successful
- * snapshot if a refresh fails.
- */
-async function refreshBalances() {
-  balancesLoading.value = true
-  balanceError.value = ''
+  if (referencePrice === null || !Number.isFinite(referencePrice)) return null
 
-  try {
-    balances.value = await fetchTestnetBalances()
-    balancesLoaded.value = true
-  } catch (cause) {
-    balanceError.value = cause instanceof Error ? cause.message : 'Failed to load balances.'
-  } finally {
-    balancesLoading.value = false
-  }
+  const estimate = quantityValue * referencePrice
+  return Number.isFinite(estimate) ? estimate : null
 }
 
-/**
- * Validates the form and submits a Market or Limit order to Spot Testnet.
- */
-async function submitOrder() {
+async function submitOrder(values: OrderFormValues) {
   if (submitting.value) return
 
   error.value = ''
   success.value = ''
-
-  if (!isPositiveDecimal(quantity.value)) {
-    error.value = 'Enter a valid positive quantity.'
-    return
-  }
+  balanceSide.value = values.side
+  lastSubmittedOrder.value = values
+  estimatedRequired.value = calculateEstimatedRequired(values)
 
   let order: SpotOrderRequest
 
-  if (type.value === ORDER_TYPE.MARKET) {
+  if (values.type === ORDER_TYPE.MARKET) {
     order = {
       symbol: props.market,
-      side: side.value,
+      side: values.side,
       type: ORDER_TYPE.MARKET,
-      quantity: quantity.value,
+      quantity: values.quantity,
     }
   } else {
-    if (!isPositiveDecimal(price.value)) {
-      error.value = 'Enter a valid positive price.'
-      return
-    }
-
     order = {
       symbol: props.market,
-      side: side.value,
+      side: values.side,
       type: ORDER_TYPE.LIMIT,
-      quantity: quantity.value,
-      price: price.value,
-      timeInForce: timeInForce.value,
+      quantity: values.quantity,
+      price: values.price,
+      timeInForce: values.timeInForce,
     }
   }
 
@@ -162,7 +105,7 @@ async function submitOrder() {
   try {
     const orderId = await placeTestnetOrder(order)
     success.value = `Order ${orderId} placed successfully.`
-    quantity.value = ''
+    resetKey.value += 1
     await refreshBalances()
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'Failed to place order.'
@@ -173,10 +116,6 @@ async function submitOrder() {
     submitting.value = false
   }
 }
-
-onMounted(() => {
-  void refreshBalances()
-})
 </script>
 
 <template>
@@ -232,59 +171,31 @@ onMounted(() => {
       Could not refresh balances: {{ balanceError }}
     </Typography>
 
-    <form
-      class="grid items-end gap-3 p-3 sm:grid-cols-2 lg:grid-cols-6"
-      @submit.prevent="submitOrder"
-    >
-      <FormSelect v-model="side" label="Side" :options="sideOptions" />
-
-      <FormSelect v-model="type" label="Type" :options="orderTypeOptions" />
-
-      <FormInput
-        v-model.trim="quantity"
-        label="Quantity"
-        inputmode="decimal"
-        autocomplete="off"
-        required
-        placeholder="0.001"
-      />
-
-      <FormInput
-        v-if="type === ORDER_TYPE.LIMIT"
-        v-model.trim="price"
-        label="Price (USDT)"
-        inputmode="decimal"
-        autocomplete="off"
-        required
-        placeholder="0.00"
-      />
-
-      <FormSelect
-        v-if="type === ORDER_TYPE.LIMIT"
-        v-model="timeInForce"
-        label="Time in force"
-        :options="timeInForceOptions"
-      />
-
-      <FormButton type="submit" :disabled="submitting">
-        {{ submitting ? 'Submitting...' : `Place ${side} order` }}
-      </FormButton>
-    </form>
+    <OrderForm :submitting="submitting" :reset-key="resetKey" @submit="submitOrder" />
 
     <div class="px-3 pb-3">
       <Typography v-if="estimatedRequired !== null" as="p" variant="small" tone="muted">
-        {{ side === ORDER_SIDE.BUY ? 'Estimated funds required' : 'Amount to sell' }}
+        {{
+          lastSubmittedOrder?.side === ORDER_SIDE.BUY
+            ? 'Estimated funds required'
+            : 'Amount to sell'
+        }}
         {{ formatOrderNumber(estimatedRequired) }} {{ requiredAsset }}
-        <span v-if="side === ORDER_SIDE.BUY"> (before fees)</span>
+        <span v-if="lastSubmittedOrder?.side === ORDER_SIDE.BUY"> (before fees)</span>
       </Typography>
+
       <Typography
-        v-if="type === ORDER_TYPE.MARKET && side === ORDER_SIDE.BUY"
+        v-if="
+          lastSubmittedOrder?.type === ORDER_TYPE.MARKET &&
+          lastSubmittedOrder?.side === ORDER_SIDE.BUY
+        "
         as="p"
         variant="small"
         tone="muted"
       >
         Market-buy estimate uses the latest ticker and may change.
       </Typography>
+
       <Typography v-if="exceedsAvailableBalance" as="p" variant="small" tone="sell" role="status">
         Estimate exceeds your available {{ requiredAsset }} balance. Binance will confirm
         availability when the order is submitted.
@@ -294,6 +205,7 @@ onMounted(() => {
     <Typography v-if="error" as="p" variant="small" tone="sell" class="px-3 pb-3" role="alert">
       {{ error }}
     </Typography>
+
     <Typography v-if="success" as="p" variant="small" tone="buy" class="px-3 pb-3" role="alert">
       {{ success }}
     </Typography>

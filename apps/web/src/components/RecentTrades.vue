@@ -10,7 +10,7 @@ const { trades, connected, error } = useRecentTrades(() => props.market)
 </script>
 
 <template>
-  <Panel title="Recent Trades" class="h-[min(45vh, 360px)] flex min-h-80 flex-col">
+  <Panel title="Recent Trades" class="flex h-[min(45vh,360px)] min-h-80 flex-col">
     <template #actions>
       <ConnectionStatus :connected="connected" />
     </template>
