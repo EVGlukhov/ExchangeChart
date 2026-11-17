@@ -5,27 +5,10 @@ import type { Market } from '../constants/chart.ts'
 import MarketSelector from './MarketSelector.vue'
 import Typography from './ui/Typography.vue'
 import ConnectionStatus from './ui/ConnectionStatus.vue'
+import { formatHeaderVolume, formatMarketPrice, formatPercentChange } from '../utils/formatters'
 
 const market = defineModel<Market>({ required: true })
 const { ticker, connected, error } = useSpotTicker(() => market.value)
-
-const priceFormatter = new Intl.NumberFormat('en-US', {
-  minimumSignificantDigits: 8,
-})
-
-const volumeFormatter = new Intl.NumberFormat('en-US', {
-  notation: 'compact',
-  maximumFractionDigits: 2,
-})
-
-const formatPrice = (value: number | undefined) =>
-  value === undefined ? '-' : priceFormatter.format(value)
-
-const formatChange = (value: number | undefined) =>
-  value === undefined ? '-' : `${value > 0 ? '+' : ''}${value.toFixed(2)}`
-
-const formatVolume = (value: number | undefined) =>
-  value === undefined ? '-' : volumeFormatter.format(value)
 
 const changeTone = computed(() => {
   if (ticker.value === null) return 'muted'
@@ -60,7 +43,7 @@ const changeTone = computed(() => {
         <Typography variant="overline" tone="muted" class="mb-1 block"> Last price </Typography>
         <div class="flex items-center justify-end gap-2">
           <Typography variant="display" :tone="changeTone" numeric>
-            {{ formatPrice(ticker?.lastPrice) }}
+            {{ formatMarketPrice(ticker?.lastPrice) }}
           </Typography>
           <Typography
             variant="caption"
@@ -68,7 +51,7 @@ const changeTone = computed(() => {
             numeric
             class="border-binance-border bg-binance-surface rounded-full border px-2 py-1 font-semibold"
           >
-            {{ ticker ? `${formatChange(ticker.changePercent)}%` : '-' }}
+            {{ ticker ? `${formatPercentChange(ticker.changePercent)}%` : '-' }}
           </Typography>
         </div>
       </div>
@@ -80,7 +63,7 @@ const changeTone = computed(() => {
           <dt><Typography variant="caption" tone="muted">24h High</Typography></dt>
           <dd class="mt-1">
             <Typography variant="heading" numeric>
-              {{ formatPrice(ticker?.highPrice) }}
+              {{ formatMarketPrice(ticker?.highPrice) }}
             </Typography>
           </dd>
         </div>
@@ -88,7 +71,9 @@ const changeTone = computed(() => {
         <div class="border-binance-border bg-binance-surface min-w-0 rounded-xl border px-3 py-2.5">
           <dt><Typography variant="caption" tone="muted">24h Low</Typography></dt>
           <dd class="mt-1">
-            <Typography variant="heading" numeric>{{ formatPrice(ticker?.lowPrice) }}</Typography>
+            <Typography variant="heading" numeric>{{
+              formatMarketPrice(ticker?.lowPrice)
+            }}</Typography>
           </dd>
         </div>
 
@@ -96,7 +81,7 @@ const changeTone = computed(() => {
           <dt><Typography variant="caption" tone="muted">24h Volume (USDT)</Typography></dt>
           <dd class="mt-1">
             <Typography variant="heading" numeric>
-              {{ formatVolume(ticker?.quoteVolume) }}
+              {{ formatHeaderVolume(ticker?.quoteVolume) }}
             </Typography>
           </dd>
         </div>

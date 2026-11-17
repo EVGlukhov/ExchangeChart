@@ -6,6 +6,7 @@ import { useCandles } from '../composables/useCandles'
 import { useCanvasChart } from '../composables/useCanvasChart'
 import { useChartCrosshair } from '../composables/useChartCrosshair'
 import { useCandleTooltip } from '../composables/useCandleTooltip'
+import { formatTooltipDate } from '../utils/formatters.ts'
 
 const props = defineProps<{
   market: Market
@@ -42,7 +43,7 @@ useCanvasChart(canvas, candles, cursor)
       role="tooltip"
     >
       <Typography as="p" variant="small" tone="emphasis" class="mb-2 truncate font-semibold">
-        {{ new Date(tooltip.candle.time).toLocaleString() }}
+        {{ formatTooltipDate(tooltip.candle.time) }}
       </Typography>
 
       <dl class="grid grid-cols-2 gap-x-4 gap-y-1">

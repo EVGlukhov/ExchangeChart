@@ -19,6 +19,7 @@ import FormButton from './controls/FormButton.vue'
 import FormSelect from './controls/FormSelect.vue'
 import Typography from './ui/Typography.vue'
 import Panel from './layout/Panel.vue'
+import { formatOrderNumber } from '../utils/formatters'
 
 const props = defineProps<{ market: Market }>()
 
@@ -98,17 +99,6 @@ const timeInForceOptions: { label: string; value: SpotTimeInForce }[] = [
   { label: 'IOC', value: TIME_IN_FORCE.IOC },
   { label: 'FOK', value: TIME_IN_FORCE.FOK },
 ]
-
-const numberFormatter = new Intl.NumberFormat(undefined, {
-  maximumSignificantDigits: 8,
-})
-
-function formatNumber(value: string | number | undefined): string {
-  if (value === undefined) return '--'
-
-  const number = typeof value === 'number' ? value : Number(value)
-  return Number.isFinite(number) ? numberFormatter.format(number) : String(value)
-}
 
 /**
  * Loads the latest balance snapshot without discarding the last successful
@@ -212,21 +202,21 @@ onMounted(() => {
         </div>
 
         <Typography as="p" variant="heading" numeric class="mt-1">
-          {{ formatNumber(quoteBalance?.free) }}
+          {{ formatOrderNumber(quoteBalance?.free) }}
         </Typography>
 
         <Typography as="p" variant="caption" tone="muted" class="mt-1">
-          Locked: {{ formatNumber(quoteBalance?.locked) }}
+          Locked: {{ formatOrderNumber(quoteBalance?.locked) }}
         </Typography>
       </div>
 
       <div class="bg-binance-panel rounded p-3">
         <Typography as="h3" variant="small" tone="muted"> Available {{ baseAsset }} </Typography>
         <Typography as="p" variant="heading" numeric class="mt-1">
-          {{ formatNumber(baseBalance?.free) }}
+          {{ formatOrderNumber(baseBalance?.free) }}
         </Typography>
         <Typography as="p" variant="caption" tone="muted" class="mt-1">
-          Locked: {{ formatNumber(baseBalance?.locked) }}
+          Locked: {{ formatOrderNumber(baseBalance?.locked) }}
         </Typography>
       </div>
     </div>
@@ -284,7 +274,7 @@ onMounted(() => {
     <div class="px-3 pb-3">
       <Typography v-if="estimatedRequired !== null" as="p" variant="small" tone="muted">
         {{ side === ORDER_SIDE.BUY ? 'Estimated funds required' : 'Amount to sell' }}
-        {{ formatNumber(estimatedRequired) }} {{ requiredAsset }}
+        {{ formatOrderNumber(estimatedRequired) }} {{ requiredAsset }}
         <span v-if="side === ORDER_SIDE.BUY"> (before fees)</span>
       </Typography>
       <Typography

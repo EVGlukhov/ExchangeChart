@@ -5,21 +5,13 @@ import type { Market } from '../constants/chart'
 import Typography from './ui/Typography.vue'
 import ConnectionStatus from './ui/ConnectionStatus.vue'
 import Panel from './layout/Panel.vue'
+import { formatOrderNumber } from '../utils/formatters'
 
 const props = defineProps<{ market: Market }>()
 
 const { orders, loading, connected, error, cancellingOrderIds, cancelOrder } = useTestnetOpenOrders(
   () => props.market,
 )
-
-const numberFormatter = new Intl.NumberFormat(undefined, {
-  maximumSignificantDigits: 8,
-})
-
-function formatNumber(value: string): string {
-  const number = Number(value)
-  return Number.isFinite(number) ? numberFormatter.format(number) : value
-}
 
 function isCancelling(order: SpotOpenOrder): boolean {
   return cancellingOrderIds.value.has(order.orderId)
@@ -92,16 +84,18 @@ function isCancelling(order: SpotOpenOrder): boolean {
               <Typography variant="small" tone="muted" mono>{{ order.type }}</Typography>
             </td>
             <td class="px-2 py-2 text-right">
-              <Typography variant="small" numeric mono>{{ formatNumber(order.price) }}</Typography>
+              <Typography variant="small" numeric mono>{{
+                formatOrderNumber(order.price)
+              }}</Typography>
             </td>
             <td class="px-2 py-2 text-right">
               <Typography variant="small" numeric mono>{{
-                formatNumber(order.origQty)
+                formatOrderNumber(order.origQty)
               }}</Typography>
             </td>
             <td class="px-2 py-2 text-right">
               <Typography variant="small" numeric mono>
-                {{ formatNumber(order.executedQty) }}
+                {{ formatOrderNumber(order.executedQty) }}
               </Typography>
             </td>
             <td class="truncate px-2 py-2">

@@ -4,16 +4,9 @@ import { TRADE_SIDE, type Market } from '../constants/chart'
 import Typography from './ui/Typography.vue'
 import ConnectionStatus from './ui/ConnectionStatus.vue'
 import Panel from './layout/Panel.vue'
-
+import { formatTradePrice, formatTradeQuantity, formatTradeTime } from '../utils/formatters'
 const props = defineProps<{ market: Market }>()
 const { trades, connected, error } = useRecentTrades(() => props.market)
-
-const priceFormatter = new Intl.NumberFormat(undefined, {
-  maximumSignificantDigits: 8,
-})
-const quantityFormatter = new Intl.NumberFormat(undefined, {
-  maximumSignificantDigits: 6,
-})
 </script>
 
 <template>
@@ -52,17 +45,17 @@ const quantityFormatter = new Intl.NumberFormat(undefined, {
                 numeric
                 mono
               >
-                {{ priceFormatter.format(trade.price) }}
+                {{ formatTradePrice(trade.price) }}
               </Typography>
             </td>
             <td class="truncate px-1 py-1 text-right">
               <Typography variant="caption" numeric mono>
-                {{ quantityFormatter.format(trade.quantity) }}
+                {{ formatTradeQuantity(trade.quantity) }}
               </Typography>
             </td>
             <td class="truncate px-3 py-1 text-right">
               <Typography variant="caption" tone="muted" mono>
-                {{ new Date(trade.time).toLocaleTimeString() }}
+                {{ formatTradeTime(trade.time) }}
               </Typography>
             </td>
           </tr>

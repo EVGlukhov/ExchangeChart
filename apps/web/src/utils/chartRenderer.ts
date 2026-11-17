@@ -7,6 +7,7 @@ import {
   VOLUME_PANEL_HEIGHT,
   createChartScales,
 } from './chartScales'
+import { formatAxisVolume, formatAxisPrice, createTimeAxisFormatter } from './formatters'
 
 export interface ChartCursor {
   x: number
@@ -75,10 +76,6 @@ function drawVolumeAxis(
 ) {
   const baseline = height - CHART_MARGIN.bottom
   const volumeTop = baseline - VOLUME_PANEL_HEIGHT
-  const volumeFormatter = new Intl.NumberFormat(undefined, {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  })
 
   context.font = chartTheme.axis.font
   context.textAlign = 'left'
@@ -95,7 +92,7 @@ function drawVolumeAxis(
     context.stroke()
 
     context.fillStyle = chartTheme.axis.text
-    context.fillText(volumeFormatter.format(volume), width - CHART_MARGIN.right + AXIS_LABEL_GAP, y)
+    context.fillText(formatAxisVolume(volume), width - CHART_MARGIN.right + AXIS_LABEL_GAP, y)
   }
 
   context.strokeStyle = chartTheme.grid
@@ -263,10 +260,6 @@ function drawPriceAxis(
   width: number,
   chartTheme: ChartTheme,
 ) {
-  const priceFormatter = new Intl.NumberFormat('en-US', {
-    maximumSignificantDigits: 6,
-  })
-
   context.font = chartTheme.axis.font
   context.textAlign = 'left'
   context.textBaseline = 'middle'
@@ -282,7 +275,7 @@ function drawPriceAxis(
     context.stroke()
 
     context.fillStyle = chartTheme.axis.text
-    context.fillText(priceFormatter.format(price), width - CHART_MARGIN.right + 8, y)
+    context.fillText(formatAxisPrice(price), width - CHART_MARGIN.right + 8, y)
   }
 }
 
@@ -311,14 +304,7 @@ function drawTimeAxis(
   const [start, end] = scales.x.domain()
   const timeRange = end.getTime() - start.getTime()
 
-  const timeFormatter = new Intl.DateTimeFormat(
-    undefined,
-    timeRange <= 2 * 24 * 60 * 60 * 1000
-      ? { hour: '2-digit', minute: '2-digit' }
-      : timeRange <= 365 * 24 * 60 * 60 * 1000
-        ? { month: 'short', day: 'numeric' }
-        : { month: 'short', year: 'numeric' },
-  )
+  const timeFormatter = createTimeAxisFormatter(timeRange)
 
   context.font = chartTheme.axis.font
   context.textAlign = 'center'
