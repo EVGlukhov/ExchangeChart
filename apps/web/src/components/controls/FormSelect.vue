@@ -31,7 +31,7 @@ function handleChange(event: Event) {
     <select
       :value="modelValue"
       :disabled="disabled"
-      class="border-binance-border bg-binance-panel text-binance-text mt-1 w-full rounded border px-2 py-2"
+      class="border-binance-border bg-binance-panel text-binance-text mt-1 w-full rounded border px-2 py-2 text-xs"
       @change="handleChange"
     >
       <option v-for="option in options" :key="option.value" :value="option.value">

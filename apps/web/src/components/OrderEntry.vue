@@ -18,6 +18,7 @@ import FormInput from './controls/FormInput.vue'
 import FormButton from './controls/FormButton.vue'
 import FormSelect from './controls/FormSelect.vue'
 import Typography from './ui/Typography.vue'
+import Panel from './layout/Panel.vue'
 
 const props = defineProps<{ market: Market }>()
 
@@ -189,13 +190,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <section
-    class="border-binance-border bg-binance-surface text-binance-text overflow-hidden rounded-lg border shadow-sm shadow-black/30"
-  >
-    <header class="border-binance-border flex h-11 items-center border-b px-3">
-      <Typography as="h2" variant="small" class="font-medium">Place Order</Typography>
+  <Panel title="Place Order">
+    <template #actions>
       <Typography variant="caption" tone="muted" class="ml-auto">{{ market }}</Typography>
-    </header>
+    </template>
 
     <div class="border-binance-border grid gap-3 border-b p-3 sm:grid-cols-2">
       <div class="bg-binance-panel rounded p-3">
@@ -309,5 +307,5 @@ onMounted(() => {
     <Typography v-if="success" as="p" variant="small" tone="buy" class="px-3 pb-3" role="alert">
       {{ success }}
     </Typography>
-  </section>
+  </Panel>
 </template>

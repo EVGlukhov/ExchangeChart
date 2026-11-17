@@ -3,6 +3,8 @@ import { ORDER_SIDE, type SpotOpenOrder } from '@exchange-chart/shared'
 import { useTestnetOpenOrders } from '../composables/useTestnetOpenOrders'
 import type { Market } from '../constants/chart'
 import Typography from './ui/Typography.vue'
+import ConnectionStatus from './ui/ConnectionStatus.vue'
+import Panel from './layout/Panel.vue'
 
 const props = defineProps<{ market: Market }>()
 
@@ -25,23 +27,10 @@ function isCancelling(order: SpotOpenOrder): boolean {
 </script>
 
 <template>
-  <section
-    class="border-binance-border bg-binance-surface text-binance-text overflow-hidden rounded-lg border shadow-sm shadow-black/30"
-  >
-    <header class="border-binance-border flex h-11 items-center justify-between border-b px-3">
-      <Typography as="h2" variant="small" class="font-medium">Open Orders</Typography>
-
-      <span class="flex items-center gap-1.5">
-        <span
-          class="size-1.5 rounded-full"
-          :class="connected ? 'bg-binance-buy' : 'bg-binance-muted'"
-        >
-        </span>
-        <Typography variant="caption" tone="muted">
-          {{ connected ? 'Live' : 'Connecting' }}
-        </Typography>
-      </span>
-    </header>
+  <Panel title="Open Orders">
+    <template #actions>
+      <ConnectionStatus :connected="connected" />
+    </template>
 
     <Typography v-if="error" as="p" variant="small" tone="sell" class="p-3" role="alert">
       {{ error }}
@@ -135,5 +124,5 @@ function isCancelling(order: SpotOpenOrder): boolean {
         </tbody>
       </table>
     </div>
-  </section>
+  </Panel>
 </template>

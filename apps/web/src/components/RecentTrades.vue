@@ -2,6 +2,8 @@
 import { useRecentTrades } from '../composables/useRecentTrades'
 import { TRADE_SIDE, type Market } from '../constants/chart'
 import Typography from './ui/Typography.vue'
+import ConnectionStatus from './ui/ConnectionStatus.vue'
+import Panel from './layout/Panel.vue'
 
 const props = defineProps<{ market: Market }>()
 const { trades, connected, error } = useRecentTrades(() => props.market)
@@ -15,24 +17,10 @@ const quantityFormatter = new Intl.NumberFormat(undefined, {
 </script>
 
 <template>
-  <section
-    class="border-binance-border bg-binance-surface text-binance-text flex h-[min(65vh,560px)] min-h-80 flex-col overflow-hidden rounded-lg border shadow-sm shadow-black/30"
-  >
-    <header
-      class="border-binance-border flex h-11 shrink-0 items-center justify-between border-b px-3"
-    >
-      <Typography as="h2" variant="small" class="font-medium">Recent Trades</Typography>
-
-      <span class="flex items-center gap-1.5">
-        <span
-          class="size-1.5 rounded-full"
-          :class="connected ? 'bg-binance-buy' : 'bg-binance-muted'"
-        ></span>
-        <Typography variant="caption" tone="muted">
-          {{ connected ? 'Live' : 'Connecting' }}
-        </Typography>
-      </span>
-    </header>
+  <Panel title="Recent Trades" class="h-[min(45vh, 360px)] flex min-h-80 flex-col">
+    <template #actions>
+      <ConnectionStatus :connected="connected" />
+    </template>
 
     <Typography v-if="error" as="p" variant="small" tone="sell" class="p-3" role="alert">
       Waiting for trades
@@ -81,5 +69,5 @@ const quantityFormatter = new Intl.NumberFormat(undefined, {
         </tbody>
       </table>
     </div>
-  </section>
+  </Panel>
 </template>

@@ -4,6 +4,7 @@ import { useSpotTicker } from '../composables/useSpotTicker.ts'
 import type { Market } from '../constants/chart.ts'
 import MarketSelector from './MarketSelector.vue'
 import Typography from './ui/Typography.vue'
+import ConnectionStatus from './ui/ConnectionStatus.vue'
 
 const market = defineModel<Market>({ required: true })
 const { ticker, connected, error } = useSpotTicker(() => market.value)
@@ -100,18 +101,12 @@ const changeTone = computed(() => {
           </dd>
         </div>
       </dl>
-      <div
-        class="border-binance-border bg-binance-surface order-2 flex items-center gap-2 justify-self-end rounded-full border px-3 py-1.5 xl:order-5"
+      <ConnectionStatus
+        :connected="connected"
+        size="normal"
         :title="error || (connected ? 'Connected to Binance Spot' : 'Connecting to Binance Spot')"
-      >
-        <span
-          class="size-2 rounded-full"
-          :class="connected ? 'bg-binance-buy animate-pulse' : 'bg-binance-muted'"
-        ></span>
-        <Typography variant="small" tone="muted">
-          {{ connected ? 'Live' : 'Connecting' }}
-        </Typography>
-      </div>
+        class="border-binance-border bg-binance-surface order-2 justify-self-end rounded-full border px-3 py-1.5 xl:order-5"
+      />
     </div>
   </header>
 </template>
